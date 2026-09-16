@@ -139,7 +139,9 @@ async function getPracticalTask(req, res) {
 }
 
 // POST /api/assessments/:id/practical-submission
-// body: { taskId, submissionText }
+// body: { taskId, submissionText } — completes the assessment once every
+// practical task for the standard has a submission (quiz is required first;
+// self-assessment is optional and doesn't gate completion).
 async function submitPracticalSubmission(req, res) {
   const assessmentId = Number(req.params.id);
   const { taskId, submissionText } = req.body || {};
@@ -148,21 +150,32 @@ async function submitPracticalSubmission(req, res) {
     return;
   }
 
-  const assessmentResult = await db.query("SELECT id FROM assessments WHERE id = $1", [assessmentId]);
-  if (!assessmentResult.rows[0]) {
+  const assessmentResult = await db.query("SELECT standard_id FROM assessments WHERE id = $1", [assessmentId]);
+  const assessment = assessmentResult.rows[0];
+  if (!assessment) {
     res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
 
-  const { rows } = await db.query(
-    `INSERT INTO practical_submissions (assessment_id, task_id, submission_text)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (assessment_id, task_id) DO UPDATE SET submission_text = $3, submitted_at = now()
-     RETURNING id`,
-    [assessmentId, taskId, submissionText]
-  );
+  const submissionId = await db.transaction(async (client) => {
+    const inserted = await client.query(
+      `INSERT INTO practical_submissions (assessment_id, task_id, submission_text)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (assessment_id, task_id) DO UPDATE SET submission_text = $3, submitted_at = now()
+       RETURNING id`,
+      [assessmentId, taskId, submissionText]
+    );
 
-  res.status(201).json({ submissionId: rows[0].id });
+    const totalTasks = await client.query("SELECT count(*) FROM practical_tasks WHERE standard_id = $1", [assessment.standard_id]);
+    const totalSubmissions = await client.query("SELECT count(*) FROM practical_submissions WHERE assessment_id = $1", [assessmentId]);
+    if (Number(totalSubmissions.rows[0].count) >= Number(totalTasks.rows[0].count)) {
+      await client.query("UPDATE assessments SET status = 'completed' WHERE id = $1", [assessmentId]);
+    }
+
+    return inserted.rows[0].id;
+  });
+
+  res.status(201).json({ submissionId });
 }
 
 // GET /api/assessments/:id/self-assessment — пункты для оценки, сгруппированные по ТФ
@@ -187,7 +200,9 @@ async function getSelfAssessmentItems(req, res) {
 }
 
 // POST /api/assessments/:id/self-assessment
-// body: { ratings: [{ competencyItemId, rating }] } — завершает проверку
+// body: { ratings: [{ competencyItemId, rating }] }
+// Self-assessment is optional and informational only — it does not gate or
+// set the assessment's completion status (see submitPracticalSubmission).
 async function submitSelfAssessment(req, res) {
   const assessmentId = Number(req.params.id);
   const { ratings } = req.body || {};
@@ -211,10 +226,9 @@ async function submitSelfAssessment(req, res) {
         [assessmentId, r.competencyItemId, r.rating]
       );
     }
-    await client.query("UPDATE assessments SET status = 'completed' WHERE id = $1", [assessmentId]);
   });
 
-  res.json({ assessmentId, status: "completed" });
+  res.json({ assessmentId, saved: ratings.length });
 }
 
 module.exports = {

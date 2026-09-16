@@ -47,6 +47,8 @@
     display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--ink-soft);}
   .step.done .step-dot{background:var(--success);border-color:var(--success);color:#fff;}
   .step.active .step-dot{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .step.skipped .step-dot{background:var(--surface);border-color:var(--line-strong);color:var(--ink-soft);}
+  .step.skipped .step-dot::after{content:"–";}
   .step-label{font-size:11.5px;color:var(--ink-soft);text-align:center;max-width:88px;}
   .step.active .step-label{color:var(--ink);font-weight:600;}
 
@@ -88,6 +90,9 @@
   }
   .radio-pill.selected{border-color:var(--accent);background:var(--accent-soft);color:#5c3f11;font-weight:600;}
 
+  .info-box{border-left:3px solid var(--accent);background:var(--accent-soft);padding:18px 20px;border-radius:0 var(--radius) var(--radius) 0;}
+  .info-box p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:#4a3a1f;}
+
   .lf-group{margin-bottom:28px;}
   .lf-group:last-child{margin-bottom:0;}
   .lf-heading{font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
@@ -116,7 +121,10 @@
   }
   .btn:hover{background:#233242;}
   .btn:disabled{background:var(--line-strong);color:#8b8578;cursor:not-allowed;}
-  .btn-row{display:flex;justify-content:flex-end;margin-top:28px;}
+  .btn-secondary{background:#fff;color:var(--ink);border:1.5px solid var(--line-strong);}
+  .btn-secondary:hover{border-color:var(--primary);background:var(--primary-soft);}
+  .btn-row{display:flex;justify-content:flex-end;gap:12px;margin-top:28px;}
+  .btn-row.left{justify-content:flex-start;margin-top:0;}
 
   .banner{padding:13px 16px;border-radius:var(--radius);font-size:13px;margin-bottom:20px;}
   .banner.error{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);}
@@ -139,16 +147,16 @@
   <div class="doc-head">
     <div class="doc-eyebrow">Проверка компетенций</div>
     <h1 class="doc-title">Тестирование на соответствие профстандарту</h1>
-    <p class="doc-sub">Три этапа — тест знаний, практическое задание и самооценка — на основе действующих профессиональных стандартов Минтруда России в области информационной безопасности.</p>
+    <p class="doc-sub">Самооценка (по желанию), тест знаний и практическое задание — на основе действующих профессиональных стандартов Минтруда России в области информационной безопасности.</p>
   </div>
 
   <div class="banner error hidden" id="load-error"></div>
 
   <div class="steps" id="steps">
     <div class="step active" data-step="0"><div class="step-dot">1</div><div class="step-label">Анкета</div></div>
-    <div class="step" data-step="1"><div class="step-dot">2</div><div class="step-label">Тест знаний</div></div>
-    <div class="step" data-step="2"><div class="step-dot">3</div><div class="step-label">Практическое задание</div></div>
-    <div class="step" data-step="3"><div class="step-dot">4</div><div class="step-label">Самооценка</div></div>
+    <div class="step" data-step="1"><div class="step-dot">2</div><div class="step-label">Самооценка</div></div>
+    <div class="step" data-step="2"><div class="step-dot">3</div><div class="step-label">Тест знаний</div></div>
+    <div class="step" data-step="3"><div class="step-dot">4</div><div class="step-label">Практическое задание</div></div>
     <div class="step" data-step="4"><div class="step-dot">5</div><div class="step-label">Готово</div></div>
   </div>
 
@@ -188,8 +196,37 @@
     </div>
   </div>
 
-  <!-- STEP 1: quiz -->
+  <!-- STEP 1: overview + optional self-assessment -->
   <div class="card hidden" id="step-1">
+    <div class="card-head">
+      <h2 class="card-title">О проверке</h2>
+      <p class="card-sub" id="overview-text"></p>
+    </div>
+
+    <div id="selfcheck-offer">
+      <div class="info-box">
+        <p id="selfcheck-offer-text"></p>
+        <div class="btn-row left">
+          <button class="btn" id="selfcheck-take-btn">Пройти самооценку</button>
+          <button class="btn btn-secondary" id="selfcheck-skip-btn">Пропустить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="self-assessment-section" class="hidden">
+      <div class="card-head" style="margin-top:28px;">
+        <h2 class="card-title">Самооценка</h2>
+        <p class="card-sub">Оцените свой уровень владения каждым навыком/знанием от 1 (не владею) до 5 (уверенно владею). Эта часть не влияет на итоговый результат — она нужна, чтобы сравнить самооценку с реальными результатами.</p>
+      </div>
+      <div id="self-assessment-body"></div>
+      <div class="btn-row">
+        <button class="btn" id="self-assessment-submit-btn">Продолжить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: quiz -->
+  <div class="card hidden" id="step-2">
     <div class="card-head">
       <h2 class="card-title">Тест знаний</h2>
       <p class="card-sub">Выберите один верный вариант ответа для каждого вопроса.</p>
@@ -200,8 +237,8 @@
     </div>
   </div>
 
-  <!-- STEP 2: practical task -->
-  <div class="card hidden" id="step-2">
+  <!-- STEP 3: practical task -->
+  <div class="card hidden" id="step-3">
     <div class="card-head">
       <h2 class="card-title">Практическое задание</h2>
       <p class="card-sub">Опишите решение в свободной форме — ревьюер оценит его по рубрике после отправки.</p>
@@ -209,18 +246,6 @@
     <div id="task-body"></div>
     <div class="btn-row">
       <button class="btn" id="task-submit-btn">Отправить решение</button>
-    </div>
-  </div>
-
-  <!-- STEP 3: self-assessment -->
-  <div class="card hidden" id="step-3">
-    <div class="card-head">
-      <h2 class="card-title">Самооценка</h2>
-      <p class="card-sub">Оцените свой уровень владения каждым навыком/знанием от 1 (не владею) до 5 (уверенно владею). Эта часть не влияет на итоговый результат — она нужна, чтобы сравнить самооценку с реальными результатами.</p>
-    </div>
-    <div id="self-assessment-body"></div>
-    <div class="btn-row">
-      <button class="btn" id="self-assessment-submit-btn">Завершить проверку</button>
     </div>
   </div>
 
@@ -249,6 +274,7 @@
 
   let assessmentId = null;
   let selectedContext = "employee";
+  let selectedStandard = null;
   let quizQuestions = [];
   let practicalTasks = [];
   let selfAssessmentItems = [];
@@ -257,11 +283,13 @@
   function showError(msg){ loadError.textContent = msg; loadError.classList.remove("hidden"); }
   function hideError(){ loadError.classList.add("hidden"); }
 
-  function goToStep(n){
+  function goToStep(n, opts){
+    const skip1 = opts && opts.skippedStep1;
     for (let i = 0; i <= 4; i++){
       document.getElementById(`step-${i}`).classList.toggle("hidden", i !== n);
       const stepEl = document.querySelector(`.step[data-step="${i}"]`);
-      stepEl.classList.remove("active", "done");
+      stepEl.classList.remove("active", "done", "skipped");
+      if (i === 1 && skip1 && n > 1) { stepEl.classList.add("skipped"); continue; }
       if (i < n) stepEl.classList.add("done");
       if (i === n) stepEl.classList.add("active");
     }
@@ -284,12 +312,27 @@
     select.innerHTML = standards.map(s => `<option value="${s.code}">${s.code} — ${s.title}</option>`).join("");
   }
 
+  function overviewCopy(context, standardTitle){
+    if (context === "employee") {
+      return `Эта проверка компетенций по профстандарту «${standardTitle}» включает тест знаний и практическое задание. Результаты будут доступны вашему руководителю или HR-специалисту.`;
+    }
+    return `Эта проверка компетенций — часть процесса отбора на позицию, требующую соответствия профстандарту «${standardTitle}». Она включает тест знаний и практическое задание, результаты которых увидит рекрутёр.`;
+  }
+
+  function selfcheckOfferCopy(context){
+    if (context === "employee") {
+      return "Дополнительно вы можете пройти самооценку по компетенциям этого профстандарта — например, если это запросил ваш отдел, как часть регулярной проверки. Самооценка необязательна и не влияет на результат проверки: она нужна, чтобы сравнить то, как вы сами оцениваете свои навыки, с реальными результатами теста и задания.";
+    }
+    return "Эта самооценка не отражает ваши реальные навыки и способности применительно к данной позиции. Прохождение самооценки необязательно, однако мы настоятельно рекомендуем её пройти — она помогает нам составить более полное представление о вас как о кандидате.";
+  }
+
   document.getElementById("start-btn").addEventListener("click", async () => {
     hideError();
     const fullName = document.getElementById("f-fullname").value.trim();
     const email = document.getElementById("f-email").value.trim();
     const organizationName = document.getElementById("f-org").value.trim();
     const standardCode = document.getElementById("f-standard").value;
+    const standardTitle = document.getElementById("f-standard").selectedOptions[0]?.textContent.split(" — ").slice(1).join(" — ") || standardCode;
 
     if (!fullName || !email || !standardCode) {
       showError("Заполните ФИО, email и выберите профстандарт.");
@@ -309,90 +352,37 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Не удалось начать проверку");
       assessmentId = data.assessmentId;
-      await loadQuiz();
+      selectedStandard = { code: standardCode, title: standardTitle };
+
+      document.getElementById("overview-text").textContent = overviewCopy(selectedContext, standardTitle);
+      document.getElementById("selfcheck-offer-text").textContent = selfcheckOfferCopy(selectedContext);
+      document.getElementById("selfcheck-offer").classList.remove("hidden");
+      document.getElementById("self-assessment-section").classList.add("hidden");
       goToStep(1);
     } catch (err) {
       showError(err.message);
     }
   });
 
-  async function loadQuiz(){
-    const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz`);
-    if (!res.ok) throw new Error("Не удалось загрузить тест знаний");
-    quizQuestions = await res.json();
-    const body = document.getElementById("quiz-body");
-    body.innerHTML = quizQuestions.map((q, qi) => `
-      <div class="quiz-q">
-        <div class="quiz-q-text">${qi + 1}. ${q.text}</div>
-        ${q.options.map((opt, oi) => `
-          <label class="quiz-opt">
-            <input type="radio" name="q-${q.id}" value="${oi}" />
-            <span>${opt}</span>
-          </label>`).join("")}
-      </div>`).join("");
-  }
-
-  document.getElementById("quiz-submit-btn").addEventListener("click", async () => {
+  document.getElementById("selfcheck-skip-btn").addEventListener("click", async () => {
     hideError();
-    const responses = quizQuestions.map(q => {
-      const checked = document.querySelector(`input[name="q-${q.id}"]:checked`);
-      return checked ? { questionId: q.id, selectedIndex: Number(checked.value) } : null;
-    }).filter(Boolean);
-
-    if (responses.length !== quizQuestions.length) {
-      showError("Ответьте на все вопросы теста перед отправкой.");
-      return;
-    }
-
     try {
-      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz-responses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ responses }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Не удалось отправить ответы");
-      document.getElementById("final-score").textContent = `${data.correctCount} / ${data.total}`;
-      await loadPracticalTask();
-      goToStep(2);
+      await loadQuiz();
+      goToStep(2, { skippedStep1: true });
     } catch (err) {
       showError(err.message);
     }
   });
 
-  async function loadPracticalTask(){
-    const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/practical-task`);
-    if (!res.ok) throw new Error("Не удалось загрузить практическое задание");
-    practicalTasks = await res.json();
-    const body = document.getElementById("task-body");
-    body.innerHTML = practicalTasks.map(t => `
-      <div class="field" data-task-id="${t.id}">
-        <label class="field-label">${t.prompt}</label>
-        <textarea placeholder="Опишите ваше решение…"></textarea>
-      </div>`).join("");
-  }
-
-  document.getElementById("task-submit-btn").addEventListener("click", async () => {
+  document.getElementById("selfcheck-take-btn").addEventListener("click", async () => {
     hideError();
-    const taskFields = document.querySelectorAll("#task-body [data-task-id]");
-    let ok = true;
-    for (const field of taskFields) {
-      const taskId = Number(field.dataset.taskId);
-      const submissionText = field.querySelector("textarea").value.trim();
-      if (!submissionText) { ok = false; continue; }
-      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/practical-submission`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, submissionText }),
-      });
-      if (!res.ok) ok = false;
+    try {
+      await loadSelfAssessment();
+      document.getElementById("selfcheck-offer").classList.add("hidden");
+      document.getElementById("self-assessment-section").classList.remove("hidden");
+    } catch (err) {
+      showError(err.message);
     }
-    if (!ok) {
-      showError("Заполните решение для каждого задания перед отправкой.");
-      return;
-    }
-    await loadSelfAssessment();
-    goToStep(3);
   });
 
   async function loadSelfAssessment(){
@@ -438,7 +428,7 @@
       ratings.push({ competencyItemId: Number(row.dataset.itemId), rating: Number(selected.dataset.value) });
     }
     if (ratings.length !== rows.length) {
-      showError("Оцените каждый пункт перед завершением.");
+      showError("Оцените каждый пункт перед тем, как продолжить.");
       return;
     }
     try {
@@ -448,11 +438,90 @@
         body: JSON.stringify({ ratings }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Не удалось завершить проверку");
-      goToStep(4);
+      if (!res.ok) throw new Error(data.error || "Не удалось сохранить самооценку");
+      await loadQuiz();
+      goToStep(2);
     } catch (err) {
       showError(err.message);
     }
+  });
+
+  async function loadQuiz(){
+    const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz`);
+    if (!res.ok) throw new Error("Не удалось загрузить тест знаний");
+    quizQuestions = await res.json();
+    const body = document.getElementById("quiz-body");
+    body.innerHTML = quizQuestions.map((q, qi) => `
+      <div class="quiz-q">
+        <div class="quiz-q-text">${qi + 1}. ${q.text}</div>
+        ${q.options.map((opt, oi) => `
+          <label class="quiz-opt">
+            <input type="radio" name="q-${q.id}" value="${oi}" />
+            <span>${opt}</span>
+          </label>`).join("")}
+      </div>`).join("");
+  }
+
+  document.getElementById("quiz-submit-btn").addEventListener("click", async () => {
+    hideError();
+    const responses = quizQuestions.map(q => {
+      const checked = document.querySelector(`input[name="q-${q.id}"]:checked`);
+      return checked ? { questionId: q.id, selectedIndex: Number(checked.value) } : null;
+    }).filter(Boolean);
+
+    if (responses.length !== quizQuestions.length) {
+      showError("Ответьте на все вопросы теста перед отправкой.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz-responses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responses }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось отправить ответы");
+      document.getElementById("final-score").textContent = `${data.correctCount} / ${data.total}`;
+      await loadPracticalTask();
+      goToStep(3);
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  async function loadPracticalTask(){
+    const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/practical-task`);
+    if (!res.ok) throw new Error("Не удалось загрузить практическое задание");
+    practicalTasks = await res.json();
+    const body = document.getElementById("task-body");
+    body.innerHTML = practicalTasks.map(t => `
+      <div class="field" data-task-id="${t.id}">
+        <label class="field-label">${t.prompt}</label>
+        <textarea placeholder="Опишите ваше решение…"></textarea>
+      </div>`).join("");
+  }
+
+  document.getElementById("task-submit-btn").addEventListener("click", async () => {
+    hideError();
+    const taskFields = document.querySelectorAll("#task-body [data-task-id]");
+    let ok = true;
+    for (const field of taskFields) {
+      const taskId = Number(field.dataset.taskId);
+      const submissionText = field.querySelector("textarea").value.trim();
+      if (!submissionText) { ok = false; continue; }
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/practical-submission`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, submissionText }),
+      });
+      if (!res.ok) ok = false;
+    }
+    if (!ok) {
+      showError("Заполните решение для каждого задания перед отправкой.");
+      return;
+    }
+    goToStep(4);
   });
 
   loadStandards().catch(err => showError(err.message + " — проверьте, что backend запущен на " + API_BASE));
