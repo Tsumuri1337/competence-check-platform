@@ -1,0 +1,62 @@
+const path = require("path");
+const express = require("express");
+const cors = require("cors");
+
+const { listStandards, getStandardByCode } = require("./routes/standards");
+const {
+  startAssessment,
+  getAssessment,
+  getQuiz,
+  submitQuizResponses,
+  getPracticalTask,
+  submitPracticalSubmission,
+  getSelfAssessmentItems,
+  submitSelfAssessment,
+} = require("./routes/assessments");
+const { listAssessments, getAssessmentReport, scorePracticalSubmission } = require("./routes/reviewers");
+
+const PORT = process.env.PORT || 3001;
+
+const app = express();
+// Открытый CORS для локальной разработки — страницы могут открываться с
+// другого origin и должны достучаться до API. Сузить при реальном деплое.
+app.use(cors());
+app.use(express.json());
+
+// Раздаём обе страницы напрямую из корня проекта — временное решение для
+// локального просмотра, пока нет отдельного фронтенд-проекта.
+const PROJECT_ROOT = path.join(__dirname, "..", "..");
+app.get("/test_flow.html", (req, res) => res.sendFile(path.join(PROJECT_ROOT, "test_flow.html")));
+app.get("/reviewer_dashboard.html", (req, res) => res.sendFile(path.join(PROJECT_ROOT, "reviewer_dashboard.html")));
+
+app.get("/api/standards", listStandards);
+app.get("/api/standards/:code", getStandardByCode);
+
+app.post("/api/assessments", startAssessment);
+app.get("/api/assessments", listAssessments);
+app.get("/api/assessments/:id", getAssessment);
+app.get("/api/assessments/:id/quiz", getQuiz);
+app.post("/api/assessments/:id/quiz-responses", submitQuizResponses);
+app.get("/api/assessments/:id/practical-task", getPracticalTask);
+app.post("/api/assessments/:id/practical-submission", submitPracticalSubmission);
+app.get("/api/assessments/:id/self-assessment", getSelfAssessmentItems);
+app.post("/api/assessments/:id/self-assessment", submitSelfAssessment);
+app.get("/api/assessments/:id/report", getAssessmentReport);
+app.post("/api/assessments/:assessmentId/practical-submissions/:submissionId/score", scorePracticalSubmission);
+
+app.use((req, res) => {
+  res.status(404).json({ error: "Маршрут не найден" });
+});
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed") {
+    res.status(400).json({ error: "Некорректный JSON в теле запроса" });
+    return;
+  }
+  res.status(500).json({ error: "Внутренняя ошибка сервера", detail: err.message });
+});
+
+app.listen(PORT, () => {
+  console.log(`Competence-check backend listening on http://localhost:${PORT}`);
+});

@@ -1,0 +1,20 @@
+{
+  "name": "competence-check-platform",
+  "version": "0.1.0",
+  "description": "Competence-check platform for RU information-security professional standards (профстандарты). Express for routing, Postgres for storage.",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "node src/migrate.js",
+    "seed": "node src/seed.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.1.0",
+    "pg": "^8.13.0"
+  }
+}

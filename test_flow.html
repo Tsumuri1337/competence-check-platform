@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Проверка компетенций</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --ink-soft:#666f7a;
+    --paper:#F6F4EF;
+    --surface:#FFFFFF;
+    --line:#E1DDD3;
+    --line-strong:#C9C3B5;
+    --primary:#2C3E50;
+    --primary-soft:#eef1f4;
+    --accent:#B8863D;
+    --accent-soft:#F6ECDA;
+    --success:#4F7942;
+    --success-soft:#EAF1E6;
+    --danger:#A23E3E;
+    --danger-soft:#F7EAEA;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.55;
+  }
+  .shell{max-width:820px;margin:0 auto;padding:56px 28px 120px;}
+
+  .doc-head{border-bottom:2px solid var(--primary);padding-bottom:24px;margin-bottom:36px;}
+  .doc-eyebrow{font-size:12.5px;color:var(--ink-soft);letter-spacing:.04em;margin-bottom:10px;text-transform:uppercase;}
+  .doc-title{font-size:30px;font-weight:700;margin:0 0 8px;color:var(--primary);letter-spacing:-.01em;}
+  .doc-sub{font-size:15px;color:var(--ink-soft);margin:0;max-width:60ch;}
+
+  .steps{display:flex;justify-content:space-between;margin-bottom:44px;position:relative;}
+  .steps::before{content:"";position:absolute;top:13px;left:0;right:0;height:1px;background:var(--line-strong);z-index:0;}
+  .step{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--paper);padding:0 8px;}
+  .step-dot{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line-strong);background:var(--surface);
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .step.done .step-dot{background:var(--success);border-color:var(--success);color:#fff;}
+  .step.active .step-dot{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .step-label{font-size:11.5px;color:var(--ink-soft);text-align:center;max-width:88px;}
+  .step.active .step-label{color:var(--ink);font-weight:600;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:32px 36px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(27,36,48,.04);
+  }
+  .card-head{margin-bottom:24px;}
+  .card-title{font-size:19px;font-weight:600;margin:0 0 6px;}
+  .card-sub{font-size:13.5px;color:var(--ink-soft);margin:0;}
+
+  .field{margin-bottom:20px;}
+  .field:last-child{margin-bottom:0;}
+  .field-label{display:block;font-size:13.5px;font-weight:500;margin-bottom:8px;}
+  .field-label .req{color:var(--danger);margin-left:2px;}
+  input[type=text], input[type=email], select, textarea{
+    width:100%;
+    border:1px solid var(--line-strong);
+    border-radius:var(--radius);
+    padding:11px 13px;
+    font-size:14px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+  }
+  textarea{min-height:140px;resize:vertical;line-height:1.5;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:600px){.row2{grid-template-columns:1fr;}}
+
+  .radio-group{display:flex;gap:10px;flex-wrap:wrap;}
+  .radio-pill{
+    border:1.5px solid var(--line-strong);border-radius:999px;padding:9px 18px;font-size:13.5px;
+    cursor:pointer;background:#fff;font-family:inherit;
+  }
+  .radio-pill.selected{border-color:var(--accent);background:var(--accent-soft);color:#5c3f11;font-weight:600;}
+
+  .lf-group{margin-bottom:28px;}
+  .lf-group:last-child{margin-bottom:0;}
+  .lf-heading{font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+  .lf-title{font-size:14.5px;font-weight:600;margin-bottom:14px;}
+
+  .quiz-q{padding:20px 0;border-top:1px solid var(--line);}
+  .quiz-q:first-child{border-top:none;padding-top:0;}
+  .quiz-q-text{font-size:14.5px;font-weight:500;margin-bottom:14px;}
+  .quiz-opt{display:flex;align-items:flex-start;gap:10px;padding:9px 0;font-size:13.5px;cursor:pointer;}
+  .quiz-opt input{margin-top:3px;accent-color:var(--primary);}
+
+  .rating-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line);}
+  .rating-row:first-child{border-top:none;padding-top:0;}
+  .rating-text{font-size:13.5px;flex:1;}
+  .rating-kind{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;margin-right:8px;}
+  .rating-scale{display:flex;gap:6px;flex-shrink:0;}
+  .rating-scale button{
+    width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line-strong);background:#fff;
+    font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-soft);font-family:inherit;
+  }
+  .rating-scale button.selected{background:var(--primary);border-color:var(--primary);color:#fff;}
+
+  .btn{
+    background:var(--primary);color:#fff;border:none;padding:13px 28px;border-radius:var(--radius);
+    font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;
+  }
+  .btn:hover{background:#233242;}
+  .btn:disabled{background:var(--line-strong);color:#8b8578;cursor:not-allowed;}
+  .btn-row{display:flex;justify-content:flex-end;margin-top:28px;}
+
+  .banner{padding:13px 16px;border-radius:var(--radius);font-size:13px;margin-bottom:20px;}
+  .banner.error{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);}
+  .banner.success{background:var(--success-soft);color:var(--success);border:1px solid var(--success);}
+
+  .score-display{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;}
+  .score-number{font-size:36px;font-weight:700;color:var(--primary);}
+  .score-label{font-size:13px;color:var(--ink-soft);}
+
+  .done-icon{width:56px;height:56px;border-radius:50%;background:var(--success-soft);color:var(--success);
+    display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:20px;}
+
+  .hidden{display:none !important;}
+  .note{margin-top:32px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="doc-head">
+    <div class="doc-eyebrow">Проверка компетенций</div>
+    <h1 class="doc-title">Тестирование на соответствие профстандарту</h1>
+    <p class="doc-sub">Три этапа — тест знаний, практическое задание и самооценка — на основе действующих профессиональных стандартов Минтруда России в области информационной безопасности.</p>
+  </div>
+
+  <div class="banner error hidden" id="load-error"></div>
+
+  <div class="steps" id="steps">
+    <div class="step active" data-step="0"><div class="step-dot">1</div><div class="step-label">Анкета</div></div>
+    <div class="step" data-step="1"><div class="step-dot">2</div><div class="step-label">Тест знаний</div></div>
+    <div class="step" data-step="2"><div class="step-dot">3</div><div class="step-label">Практическое задание</div></div>
+    <div class="step" data-step="3"><div class="step-dot">4</div><div class="step-label">Самооценка</div></div>
+    <div class="step" data-step="4"><div class="step-dot">5</div><div class="step-label">Готово</div></div>
+  </div>
+
+  <!-- STEP 0: registration -->
+  <div class="card" id="step-0">
+    <div class="card-head">
+      <h2 class="card-title">Начало проверки</h2>
+      <p class="card-sub">Укажите свои данные и выберите профстандарт, по которому проходите проверку.</p>
+    </div>
+    <div class="field">
+      <label class="field-label">Я проверяюсь как<span class="req">*</span></label>
+      <div class="radio-group" id="context-group">
+        <button type="button" class="radio-pill selected" data-value="employee">Сотрудник компании</button>
+        <button type="button" class="radio-pill" data-value="candidate">Кандидат на вакансию</button>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label class="field-label">ФИО<span class="req">*</span></label>
+        <input type="text" id="f-fullname" placeholder="Иванова Мария Сергеевна" />
+      </div>
+      <div class="field">
+        <label class="field-label">Email<span class="req">*</span></label>
+        <input type="email" id="f-email" placeholder="maria@example.ru" />
+      </div>
+    </div>
+    <div class="field" id="org-field">
+      <label class="field-label">Организация</label>
+      <input type="text" id="f-org" placeholder="ООО «Компания»" />
+    </div>
+    <div class="field">
+      <label class="field-label">Профессиональный стандарт<span class="req">*</span></label>
+      <select id="f-standard"><option value="">Загрузка…</option></select>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="start-btn">Начать проверку</button>
+    </div>
+  </div>
+
+  <!-- STEP 1: quiz -->
+  <div class="card hidden" id="step-1">
+    <div class="card-head">
+      <h2 class="card-title">Тест знаний</h2>
+      <p class="card-sub">Выберите один верный вариант ответа для каждого вопроса.</p>
+    </div>
+    <div id="quiz-body"></div>
+    <div class="btn-row">
+      <button class="btn" id="quiz-submit-btn">Отправить ответы</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: practical task -->
+  <div class="card hidden" id="step-2">
+    <div class="card-head">
+      <h2 class="card-title">Практическое задание</h2>
+      <p class="card-sub">Опишите решение в свободной форме — ревьюер оценит его по рубрике после отправки.</p>
+    </div>
+    <div id="task-body"></div>
+    <div class="btn-row">
+      <button class="btn" id="task-submit-btn">Отправить решение</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: self-assessment -->
+  <div class="card hidden" id="step-3">
+    <div class="card-head">
+      <h2 class="card-title">Самооценка</h2>
+      <p class="card-sub">Оцените свой уровень владения каждым навыком/знанием от 1 (не владею) до 5 (уверенно владею). Эта часть не влияет на итоговый результат — она нужна, чтобы сравнить самооценку с реальными результатами.</p>
+    </div>
+    <div id="self-assessment-body"></div>
+    <div class="btn-row">
+      <button class="btn" id="self-assessment-submit-btn">Завершить проверку</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: done -->
+  <div class="card hidden" id="step-4">
+    <div class="done-icon">✓</div>
+    <h2 class="card-title">Проверка завершена</h2>
+    <p class="card-sub" style="margin-bottom:20px;">Результаты теста знаний ниже. Практическое задание рассмотрит ревьюер — итоговый отчёт будет доступен в панели ревьюера.</p>
+    <div class="score-display">
+      <span class="score-number" id="final-score">—</span>
+      <span class="score-label">правильных ответов в тесте знаний</span>
+    </div>
+  </div>
+
+  <div class="note">
+    Содержание проверки основано на действующих профессиональных стандартах
+    Минтруда России (см. раздел «Профстандарт» на каждом этапе). Вопросы теста
+    и практическое задание составлены на основе этих стандартов, но не
+    являются их частью.
+  </div>
+
+</div>
+
+<script>
+  const API_BASE = "http://localhost:3001";
+
+  let assessmentId = null;
+  let selectedContext = "employee";
+  let quizQuestions = [];
+  let practicalTasks = [];
+  let selfAssessmentItems = [];
+
+  const loadError = document.getElementById("load-error");
+  function showError(msg){ loadError.textContent = msg; loadError.classList.remove("hidden"); }
+  function hideError(){ loadError.classList.add("hidden"); }
+
+  function goToStep(n){
+    for (let i = 0; i <= 4; i++){
+      document.getElementById(`step-${i}`).classList.toggle("hidden", i !== n);
+      const stepEl = document.querySelector(`.step[data-step="${i}"]`);
+      stepEl.classList.remove("active", "done");
+      if (i < n) stepEl.classList.add("done");
+      if (i === n) stepEl.classList.add("active");
+    }
+  }
+
+  document.querySelectorAll("#context-group .radio-pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#context-group .radio-pill").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedContext = btn.dataset.value;
+      document.getElementById("org-field").classList.toggle("hidden", selectedContext === "candidate");
+    });
+  });
+
+  async function loadStandards(){
+    const res = await fetch(`${API_BASE}/api/standards`);
+    if (!res.ok) throw new Error("Не удалось загрузить список профстандартов");
+    const standards = await res.json();
+    const select = document.getElementById("f-standard");
+    select.innerHTML = standards.map(s => `<option value="${s.code}">${s.code} — ${s.title}</option>`).join("");
+  }
+
+  document.getElementById("start-btn").addEventListener("click", async () => {
+    hideError();
+    const fullName = document.getElementById("f-fullname").value.trim();
+    const email = document.getElementById("f-email").value.trim();
+    const organizationName = document.getElementById("f-org").value.trim();
+    const standardCode = document.getElementById("f-standard").value;
+
+    if (!fullName || !email || !standardCode) {
+      showError("Заполните ФИО, email и выберите профстандарт.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          standardCode,
+          context: selectedContext,
+          person: { fullName, email, organizationName: organizationName || undefined },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось начать проверку");
+      assessmentId = data.assessmentId;
+      await loadQuiz();
+      goToStep(1);
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  async function loadQuiz(){
+    const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz`);
+    if (!res.ok) throw new Error("Не удалось загрузить тест знаний");
+    quizQuestions = await res.json();
+    const body = document.getElementById("quiz-body");
+    body.innerHTML = quizQuestions.map((q, qi) => `
+      <div class="quiz-q">
+        <div class="quiz-q-text">${qi + 1}. ${q.text}</div>
+        ${q.options.map((opt, oi) => `
+          <label class="quiz-opt">
+            <input type="radio" name="q-${q.id}" value="${oi}" />
+            <span>${opt}</span>
+          </label>`).join("")}
+      </div>`).join("");
+  }
+
+  document.getElementById("quiz-submit-btn").addEventListener("click", async () => {
+    hideError();
+    const responses = quizQuestions.map(q => {
+      const checked = document.querySelector(`input[name="q-${q.id}"]:checked`);
+      return checked ? { questionId: q.id, selectedIndex: Number(checked.value) } : null;
+    }).filter(Boolean);
+
+    if (responses.length !== quizQuestions.length) {
+      showError("Ответьте на все вопросы теста перед отправкой.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz-responses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responses }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось отправить ответы");
+      document.getElementById("final-score").textContent = `${data.correctCount} / ${data.total}`;
+      await loadPracticalTask();
+      goToStep(2);
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  async function loadPracticalTask(){
+    const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/practical-task`);
+    if (!res.ok) throw new Error("Не удалось загрузить практическое задание");
+    practicalTasks = await res.json();
+    const body = document.getElementById("task-body");
+    body.innerHTML = practicalTasks.map(t => `
+      <div class="field" data-task-id="${t.id}">
+        <label class="field-label">${t.prompt}</label>
+        <textarea placeholder="Опишите ваше решение…"></textarea>
+      </div>`).join("");
+  }
+
+  document.getElementById("task-submit-btn").addEventListener("click", async () => {
+    hideError();
+    const taskFields = document.querySelectorAll("#task-body [data-task-id]");
+    let ok = true;
+    for (const field of taskFields) {
+      const taskId = Number(field.dataset.taskId);
+      const submissionText = field.querySelector("textarea").value.trim();
+      if (!submissionText) { ok = false; continue; }
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/practical-submission`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, submissionText }),
+      });
+      if (!res.ok) ok = false;
+    }
+    if (!ok) {
+      showError("Заполните решение для каждого задания перед отправкой.");
+      return;
+    }
+    await loadSelfAssessment();
+    goToStep(3);
+  });
+
+  async function loadSelfAssessment(){
+    const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/self-assessment`);
+    if (!res.ok) throw new Error("Не удалось загрузить самооценку");
+    selfAssessmentItems = await res.json();
+
+    const groups = new Map();
+    for (const item of selfAssessmentItems) {
+      if (!groups.has(item.labor_function_code)) groups.set(item.labor_function_code, { title: item.labor_function_title, items: [] });
+      groups.get(item.labor_function_code).items.push(item);
+    }
+
+    const body = document.getElementById("self-assessment-body");
+    body.innerHTML = [...groups.entries()].map(([code, group]) => `
+      <div class="lf-group">
+        <div class="lf-heading">${code}</div>
+        <div class="lf-title">${group.title}</div>
+        ${group.items.map(item => `
+          <div class="rating-row" data-item-id="${item.id}">
+            <div class="rating-text"><span class="rating-kind">${item.kind === "knowledge" ? "знание" : "умение"}</span>${item.text}</div>
+            <div class="rating-scale">
+              ${[1,2,3,4,5].map(n => `<button type="button" data-value="${n}">${n}</button>`).join("")}
+            </div>
+          </div>`).join("")}
+      </div>`).join("");
+
+    body.querySelectorAll(".rating-scale button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+      });
+    });
+  }
+
+  document.getElementById("self-assessment-submit-btn").addEventListener("click", async () => {
+    hideError();
+    const rows = document.querySelectorAll("#self-assessment-body .rating-row");
+    const ratings = [];
+    for (const row of rows) {
+      const selected = row.querySelector(".rating-scale button.selected");
+      if (!selected) continue;
+      ratings.push({ competencyItemId: Number(row.dataset.itemId), rating: Number(selected.dataset.value) });
+    }
+    if (ratings.length !== rows.length) {
+      showError("Оцените каждый пункт перед завершением.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/self-assessment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ratings }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось завершить проверку");
+      goToStep(4);
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  loadStandards().catch(err => showError(err.message + " — проверьте, что backend запущен на " + API_BASE));
+</script>
+</body>
+</html>

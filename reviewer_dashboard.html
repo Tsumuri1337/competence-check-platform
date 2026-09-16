@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Панель ревьюера — проверка компетенций</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --ink-soft:#666f7a;
+    --paper:#F6F4EF;
+    --surface:#FFFFFF;
+    --line:#E1DDD3;
+    --line-strong:#C9C3B5;
+    --primary:#2C3E50;
+    --primary-soft:#eef1f4;
+    --accent:#B8863D;
+    --accent-soft:#F6ECDA;
+    --success:#4F7942;
+    --success-soft:#EAF1E6;
+    --danger:#A23E3E;
+    --danger-soft:#F7EAEA;
+    --warn:#9C7A26;
+    --warn-soft:#FBF4DF;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;}
+  .shell{max-width:1180px;margin:0 auto;padding:48px 28px 100px;}
+
+  .doc-head{border-bottom:2px solid var(--primary);padding-bottom:22px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;}
+  .doc-eyebrow{font-size:12.5px;color:var(--ink-soft);letter-spacing:.04em;margin-bottom:8px;text-transform:uppercase;}
+  .doc-title{font-size:26px;font-weight:700;margin:0 0 4px;color:var(--primary);}
+  .doc-sub{font-size:14px;color:var(--ink-soft);margin:0;}
+  .who{font-size:12px;color:var(--ink-soft);text-align:right;}
+  .who b{color:var(--ink);font-weight:600;}
+
+  .banner{padding:13px 16px;border-radius:var(--radius);font-size:13px;margin-bottom:18px;}
+  .banner.error{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);}
+
+  .filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+  .filters select{
+    border:1px solid var(--line-strong);border-radius:var(--radius);padding:9px 12px;font-size:13px;
+    font-family:inherit;background:#fff;color:var(--ink);
+  }
+  .filters .count{font-size:12px;color:var(--ink-soft);margin-left:auto;}
+
+  .layout{display:grid;grid-template-columns:1fr 1.5fr;gap:20px;align-items:start;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+
+  .list{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 3px rgba(27,36,48,.04);}
+  .list-row{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:15px 18px;border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .list-row:last-child{border-bottom:none;}
+  .list-row:hover{background:var(--primary-soft);}
+  .list-row.active{background:var(--accent-soft);border-left:3px solid var(--accent);padding-left:15px;}
+  .lr-main{min-width:0;}
+  .lr-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lr-vac{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lr-date{font-size:10.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-top:4px;}
+
+  .badge{font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:10px;white-space:nowrap;}
+  .badge.in_progress{background:var(--warn-soft);color:var(--warn);}
+  .badge.completed{background:var(--success-soft);color:var(--success);}
+  .badge.employee{background:var(--primary-soft);color:var(--primary);}
+  .badge.candidate{background:var(--accent-soft);color:#5c3f11;}
+
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:28px 32px;min-height:560px;box-shadow:0 1px 3px rgba(27,36,48,.04);}
+  .panel-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px;}
+  .panel-name{font-size:19px;font-weight:700;margin:0 0 4px;}
+  .panel-vac{font-size:13.5px;color:var(--ink-soft);margin:0;}
+  .panel-meta{font-size:11px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-top:8px;}
+
+  .section-block{margin-bottom:28px;}
+  .section-block:last-child{margin-bottom:0;}
+  .section-title{font-size:13.5px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+
+  .quiz-score{display:flex;align-items:baseline;gap:8px;}
+  .quiz-score-num{font-size:28px;font-weight:700;color:var(--primary);}
+  .quiz-score-label{font-size:12.5px;color:var(--ink-soft);}
+
+  .task-card{border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
+  .task-card:last-child{margin-bottom:0;}
+  .task-prompt{font-size:13.5px;font-weight:600;margin-bottom:8px;}
+  .task-rubric{font-size:12px;color:var(--ink-soft);background:var(--primary-soft);padding:8px 10px;border-radius:4px;margin-bottom:12px;}
+  .task-submission{font-size:13px;white-space:pre-wrap;background:#fdfcfa;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin-bottom:14px;max-height:240px;overflow-y:auto;}
+  .score-row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;}
+  .score-row input[type=number]{width:80px;border:1px solid var(--line-strong);border-radius:var(--radius);padding:8px 10px;font-size:13px;font-family:inherit;}
+  .score-row textarea{flex:1;min-width:200px;border:1px solid var(--line-strong);border-radius:var(--radius);padding:8px 10px;font-size:13px;font-family:inherit;min-height:38px;}
+  .score-row button{
+    border:none;background:var(--primary);color:#fff;padding:9px 18px;border-radius:var(--radius);
+    font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .score-saved{font-size:11.5px;color:var(--success);margin-top:8px;}
+
+  .lf-group{margin-bottom:20px;}
+  .lf-group:last-child{margin-bottom:0;}
+  .lf-heading{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;}
+  .rating-item{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-top:1px solid var(--line);font-size:13px;}
+  .rating-item:first-child{border-top:none;}
+  .rating-kind{font-size:9.5px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;margin-right:8px;}
+  .rating-value{font-weight:700;color:var(--primary);flex-shrink:0;}
+
+  .empty{display:flex;align-items:center;justify-content:center;height:500px;color:var(--ink-soft);font-size:13px;text-align:center;padding:0 40px;}
+  .note{margin-top:28px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="doc-head">
+    <div>
+      <div class="doc-eyebrow">Панель ревьюера</div>
+      <h1 class="doc-title">Проверки компетенций</h1>
+      <p class="doc-sub">Список проверок, оценка практических заданий и сводные отчёты</p>
+    </div>
+    <div class="who">Вы вошли как <b id="who-email"></b><br/>роль: ревьюер</div>
+  </div>
+
+  <div class="banner error hidden" id="load-error"></div>
+
+  <div class="filters">
+    <select id="f-standard"><option value="">Все профстандарты</option></select>
+    <select id="f-context">
+      <option value="">Любой контекст</option>
+      <option value="employee">Сотрудники</option>
+      <option value="candidate">Кандидаты</option>
+    </select>
+    <select id="f-status">
+      <option value="">Любой статус</option>
+      <option value="in_progress">В процессе</option>
+      <option value="completed">Завершена</option>
+    </select>
+    <span class="count" id="f-count"></span>
+  </div>
+
+  <div class="layout">
+    <div class="list" id="list"></div>
+    <div class="panel" id="panel"></div>
+  </div>
+
+  <div class="note">
+    Каждый просмотр сводного отчёта записывается в журнал доступа. Оценка
+    практического задания фиксируется с указанием ревьюера и времени.
+  </div>
+
+</div>
+
+<script>
+  const API_BASE = "http://localhost:3001";
+  const REVIEWER_EMAIL = "reviewer@example.ru";
+  const AUTH_HEADERS = { "X-Reviewer-Email": REVIEWER_EMAIL };
+  document.getElementById("who-email").textContent = REVIEWER_EMAIL;
+
+  const CONTEXT_LABEL = { employee: "Сотрудник", candidate: "Кандидат" };
+  const STATUS_LABEL = { in_progress: "В процессе", completed: "Завершена" };
+
+  let assessments = [];
+  let activeId = null;
+  let activeReport = null;
+
+  const listEl = document.getElementById("list");
+  const panelEl = document.getElementById("panel");
+  const countEl = document.getElementById("f-count");
+  const standardFilter = document.getElementById("f-standard");
+  const contextFilter = document.getElementById("f-context");
+  const statusFilter = document.getElementById("f-status");
+  const loadError = document.getElementById("load-error");
+
+  function showError(msg){ loadError.textContent = msg; loadError.classList.remove("hidden"); }
+  function hideError(){ loadError.classList.add("hidden"); }
+  function formatDate(iso){ return new Date(iso).toLocaleString("ru-RU"); }
+
+  async function loadStandardsFilter(){
+    const res = await fetch(`${API_BASE}/api/standards`);
+    if (!res.ok) return;
+    const standards = await res.json();
+    standardFilter.innerHTML = '<option value="">Все профстандарты</option>' +
+      standards.map(s => `<option value="${s.code}">${s.code} — ${s.title}</option>`).join("");
+  }
+
+  async function fetchAssessments(){
+    const params = new URLSearchParams();
+    if (standardFilter.value) params.set("standardCode", standardFilter.value);
+    if (contextFilter.value) params.set("context", contextFilter.value);
+    if (statusFilter.value) params.set("status", statusFilter.value);
+    const res = await fetch(`${API_BASE}/api/assessments?${params.toString()}`, { headers: AUTH_HEADERS });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Не удалось загрузить список проверок");
+    }
+    assessments = await res.json();
+  }
+
+  function renderList(){
+    countEl.textContent = assessments.length + (assessments.length === 1 ? " проверка" : " проверок");
+    if (assessments.length === 0){
+      listEl.innerHTML = '<div class="empty">Нет проверок, соответствующих фильтрам.</div>';
+      if (activeId === null) panelEl.innerHTML = '<div class="empty">Выберите проверку слева, чтобы увидеть отчёт.</div>';
+      return;
+    }
+    listEl.innerHTML = assessments.map(a => `
+      <div class="list-row ${a.id===activeId?'active':''}" data-id="${a.id}">
+        <div class="lr-main">
+          <div class="lr-name">${a.full_name}</div>
+          <div class="lr-vac">${a.standard_code} — ${a.standard_title}</div>
+          <div class="lr-date">начато ${formatDate(a.created_at)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <span class="badge ${a.context}">${CONTEXT_LABEL[a.context]}</span>
+          <span class="badge ${a.status}">${STATUS_LABEL[a.status]}</span>
+        </div>
+      </div>`).join("");
+    listEl.querySelectorAll(".list-row").forEach(row => {
+      row.addEventListener("click", () => selectAssessment(parseInt(row.dataset.id)));
+    });
+  }
+
+  async function selectAssessment(id){
+    activeId = id;
+    renderList();
+    panelEl.innerHTML = '<div class="empty">Загрузка отчёта…</div>';
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${id}/report`, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось загрузить отчёт");
+      activeReport = data;
+      hideError();
+      renderPanel();
+    } catch (err) {
+      activeReport = null;
+      showError(err.message);
+      panelEl.innerHTML = '<div class="empty">Не удалось загрузить отчёт.</div>';
+    }
+  }
+
+  function renderPanel(){
+    if (!activeReport) { panelEl.innerHTML = '<div class="empty">Выберите проверку слева, чтобы увидеть отчёт.</div>'; return; }
+    const { assessment, quiz, practicalSubmissions, selfAssessment } = activeReport;
+
+    const lfGroups = new Map();
+    for (const r of selfAssessment) {
+      if (!lfGroups.has(r.labor_function_code)) lfGroups.set(r.labor_function_code, { title: r.labor_function_title, items: [] });
+      lfGroups.get(r.labor_function_code).items.push(r);
+    }
+
+    panelEl.innerHTML = `
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-name">${assessment.full_name}</h2>
+          <p class="panel-vac">${assessment.standard_code} — ${assessment.standard_title}</p>
+          <div class="panel-meta">проверка №${assessment.id} · ${assessment.email} · начато ${formatDate(assessment.created_at)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <span class="badge ${assessment.context}">${CONTEXT_LABEL[assessment.context]}</span>
+          <span class="badge ${assessment.status}">${STATUS_LABEL[assessment.status]}</span>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-title">Тест знаний</div>
+        <div class="quiz-score">
+          <span class="quiz-score-num">${quiz.score.correct} / ${quiz.score.total}</span>
+          <span class="quiz-score-label">правильных ответов</span>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-title">Практическое задание</div>
+        ${practicalSubmissions.length === 0 ? '<div style="font-size:13px;color:var(--ink-soft);">Задание пока не отправлено.</div>' :
+          practicalSubmissions.map(ps => `
+            <div class="task-card" data-submission-id="${ps.id}">
+              <div class="task-prompt">${ps.prompt}</div>
+              <div class="task-rubric"><b>Рубрика:</b> ${ps.rubric}</div>
+              <div class="task-submission">${ps.submission_text}</div>
+              <div class="score-row">
+                <input type="number" min="0" max="100" placeholder="0-100" value="${ps.reviewer_score ?? ''}" class="score-input" />
+                <textarea placeholder="Комментарий ревьюера…" class="notes-input">${ps.reviewer_notes ?? ''}</textarea>
+                <button type="button" class="save-score-btn">Сохранить</button>
+              </div>
+              <div class="score-saved hidden">Сохранено.</div>
+            </div>`).join("")}
+      </div>
+
+      <div class="section-block">
+        <div class="section-title">Самооценка</div>
+        ${[...lfGroups.entries()].map(([code, group]) => `
+          <div class="lf-group">
+            <div class="lf-heading">${code} — ${group.title}</div>
+            ${group.items.map(item => `
+              <div class="rating-item">
+                <span><span class="rating-kind">${item.kind === "knowledge" ? "знание" : "умение"}</span>${item.text}</span>
+                <span class="rating-value">${item.rating}/5</span>
+              </div>`).join("")}
+          </div>`).join("") || '<div style="font-size:13px;color:var(--ink-soft);">Самооценка пока не пройдена.</div>'}
+      </div>
+    `;
+
+    panelEl.querySelectorAll(".task-card").forEach(card => {
+      card.querySelector(".save-score-btn").addEventListener("click", async () => {
+        const submissionId = card.dataset.submissionId;
+        const score = Number(card.querySelector(".score-input").value);
+        const notes = card.querySelector(".notes-input").value;
+        try {
+          const res = await fetch(`${API_BASE}/api/assessments/${activeId}/practical-submissions/${submissionId}/score`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...AUTH_HEADERS },
+            body: JSON.stringify({ score, notes }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Не удалось сохранить оценку");
+          card.querySelector(".score-saved").classList.remove("hidden");
+          hideError();
+        } catch (err) {
+          showError(err.message);
+        }
+      });
+    });
+  }
+
+  async function refreshList(){
+    try {
+      await fetchAssessments();
+      hideError();
+      renderList();
+    } catch (err) {
+      showError(err.message + " — проверьте, что backend запущен на " + API_BASE);
+      listEl.innerHTML = '<div class="empty">Не удалось загрузить список проверок.</div>';
+    }
+  }
+
+  standardFilter.addEventListener("change", refreshList);
+  contextFilter.addEventListener("change", refreshList);
+  statusFilter.addEventListener("change", refreshList);
+
+  loadStandardsFilter();
+  refreshList();
+  renderPanel();
+</script>
+</body>
+</html>
