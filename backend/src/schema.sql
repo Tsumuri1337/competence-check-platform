@@ -89,6 +89,10 @@ CREATE TABLE IF NOT EXISTS assessments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Решение по кандидату (найм/отказ) — задел только для context='candidate';
+-- для сотрудников пока не используется (см. backend/README.md).
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS decision TEXT CHECK (decision IN ('accepted', 'rejected', 'pending'));
+
 CREATE TABLE IF NOT EXISTS quiz_responses (
   id SERIAL PRIMARY KEY,
   assessment_id INTEGER NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,

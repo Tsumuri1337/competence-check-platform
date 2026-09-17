@@ -66,6 +66,8 @@
 
   .field{margin-bottom:20px;}
   .field:last-child{margin-bottom:0;}
+  .field.has-error textarea{border-color:var(--danger);}
+  .field.has-error .field-label{color:var(--danger);}
   .field-label{display:block;font-size:13.5px;font-weight:500;margin-bottom:8px;}
   .field-label .req{color:var(--danger);margin-left:2px;}
   input[type=text], input[type=email], select, textarea{
@@ -80,6 +82,8 @@
   }
   textarea{min-height:140px;resize:vertical;line-height:1.5;}
   input:focus, select:focus, textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  input.input-error, select.input-error{border-color:var(--danger);}
+  .field-hint-error{font-size:12px;color:var(--danger);margin-top:6px;}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   @media (max-width:600px){.row2{grid-template-columns:1fr;}}
 
@@ -100,12 +104,14 @@
 
   .quiz-q{padding:20px 0;border-top:1px solid var(--line);}
   .quiz-q:first-child{border-top:none;padding-top:0;}
+  .quiz-q.has-error{border-left:3px solid var(--danger);background:var(--danger-soft);padding-left:14px;}
   .quiz-q-text{font-size:14.5px;font-weight:500;margin-bottom:14px;}
   .quiz-opt{display:flex;align-items:flex-start;gap:10px;padding:9px 0;font-size:13.5px;cursor:pointer;}
   .quiz-opt input{margin-top:3px;accent-color:var(--primary);}
 
   .rating-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line);}
   .rating-row:first-child{border-top:none;padding-top:0;}
+  .rating-row.has-error{background:var(--danger-soft);}
   .rating-text{font-size:13.5px;flex:1;}
   .rating-kind{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;margin-right:8px;}
   .rating-scale{display:flex;gap:6px;flex-shrink:0;}
@@ -326,16 +332,51 @@
     return "Эта самооценка не отражает ваши реальные навыки и способности применительно к данной позиции. Прохождение самооценки необязательно, однако мы настоятельно рекомендуем её пройти — она помогает нам составить более полное представление о вас как о кандидате.";
   }
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const fullNameInput = document.getElementById("f-fullname");
+  const emailInput = document.getElementById("f-email");
+  const standardSelect = document.getElementById("f-standard");
+  [fullNameInput, emailInput].forEach(el => el.addEventListener("input", () => el.classList.remove("input-error")));
+  standardSelect.addEventListener("change", () => standardSelect.classList.remove("input-error"));
+
   document.getElementById("start-btn").addEventListener("click", async () => {
     hideError();
-    const fullName = document.getElementById("f-fullname").value.trim();
-    const email = document.getElementById("f-email").value.trim();
-    const organizationName = document.getElementById("f-org").value.trim();
-    const standardCode = document.getElementById("f-standard").value;
-    const standardTitle = document.getElementById("f-standard").selectedOptions[0]?.textContent.split(" — ").slice(1).join(" — ") || standardCode;
+    [fullNameInput, emailInput, standardSelect].forEach(el => el.classList.remove("input-error"));
 
-    if (!fullName || !email || !standardCode) {
-      showError("Заполните ФИО, email и выберите профстандарт.");
+    const fullName = fullNameInput.value.trim();
+    const email = emailInput.value.trim();
+    const organizationName = document.getElementById("f-org").value.trim();
+    const standardCode = standardSelect.value;
+    const standardTitle = standardSelect.selectedOptions[0]?.textContent.split(" — ").slice(1).join(" — ") || standardCode;
+
+    const problems = [];
+    let firstInvalid = null;
+    if (!fullName) {
+      fullNameInput.classList.add("input-error");
+      problems.push("укажите ФИО");
+      firstInvalid = firstInvalid || fullNameInput;
+    }
+    if (!email) {
+      emailInput.classList.add("input-error");
+      problems.push("укажите email");
+      firstInvalid = firstInvalid || emailInput;
+    } else if (!EMAIL_RE.test(email)) {
+      emailInput.classList.add("input-error");
+      problems.push("введите корректный адрес электронной почты (например, name@example.ru)");
+      firstInvalid = firstInvalid || emailInput;
+    }
+    if (!standardCode) {
+      standardSelect.classList.add("input-error");
+      problems.push("выберите профессиональный стандарт");
+      firstInvalid = firstInvalid || standardSelect;
+    }
+
+    if (problems.length) {
+      const message = problems.length === 1
+        ? problems[0][0].toUpperCase() + problems[0].slice(1) + "."
+        : "Заполните форму корректно: " + problems.join(", ") + ".";
+      showError(message);
+      firstInvalid.focus();
       return;
     }
 
@@ -414,6 +455,7 @@
       btn.addEventListener("click", () => {
         btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
+        btn.closest(".rating-row").classList.remove("has-error");
       });
     });
   }
@@ -421,14 +463,21 @@
   document.getElementById("self-assessment-submit-btn").addEventListener("click", async () => {
     hideError();
     const rows = document.querySelectorAll("#self-assessment-body .rating-row");
+    rows.forEach(row => row.classList.remove("has-error"));
     const ratings = [];
+    let firstUnanswered = null;
     for (const row of rows) {
       const selected = row.querySelector(".rating-scale button.selected");
-      if (!selected) continue;
-      ratings.push({ competencyItemId: Number(row.dataset.itemId), rating: Number(selected.dataset.value) });
+      if (selected) {
+        ratings.push({ competencyItemId: Number(row.dataset.itemId), rating: Number(selected.dataset.value) });
+      } else {
+        row.classList.add("has-error");
+        firstUnanswered = firstUnanswered || row;
+      }
     }
-    if (ratings.length !== rows.length) {
-      showError("Оцените каждый пункт перед тем, как продолжить.");
+    if (firstUnanswered) {
+      showError("Оцените каждый пункт перед тем, как продолжить — неоценённые отмечены ниже.");
+      firstUnanswered.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     try {
@@ -460,17 +509,32 @@
             <span>${opt}</span>
           </label>`).join("")}
       </div>`).join("");
+
+    body.querySelectorAll("input[type=radio]").forEach(input => {
+      input.addEventListener("change", () => input.closest(".quiz-q").classList.remove("has-error"));
+    });
   }
 
   document.getElementById("quiz-submit-btn").addEventListener("click", async () => {
     hideError();
-    const responses = quizQuestions.map(q => {
-      const checked = document.querySelector(`input[name="q-${q.id}"]:checked`);
-      return checked ? { questionId: q.id, selectedIndex: Number(checked.value) } : null;
-    }).filter(Boolean);
+    const quizQEls = document.querySelectorAll("#quiz-body .quiz-q");
+    quizQEls.forEach(el => el.classList.remove("has-error"));
 
-    if (responses.length !== quizQuestions.length) {
-      showError("Ответьте на все вопросы тестирования перед отправкой.");
+    const responses = [];
+    let firstUnanswered = null;
+    quizQuestions.forEach((q, qi) => {
+      const checked = document.querySelector(`input[name="q-${q.id}"]:checked`);
+      if (checked) {
+        responses.push({ questionId: q.id, selectedIndex: Number(checked.value) });
+      } else {
+        quizQEls[qi].classList.add("has-error");
+        firstUnanswered = firstUnanswered || quizQEls[qi];
+      }
+    });
+
+    if (firstUnanswered) {
+      showError("Ответьте на все вопросы — пропущенные отмечены ниже.");
+      firstUnanswered.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -500,26 +564,46 @@
         <label class="field-label">${t.prompt}</label>
         <textarea placeholder="Опишите ваше решение…"></textarea>
       </div>`).join("");
+
+    body.querySelectorAll("textarea").forEach(ta => {
+      ta.addEventListener("input", () => ta.closest("[data-task-id]").classList.remove("has-error"));
+    });
   }
 
   document.getElementById("task-submit-btn").addEventListener("click", async () => {
     hideError();
     const taskFields = document.querySelectorAll("#task-body [data-task-id]");
-    let ok = true;
-    for (const field of taskFields) {
+    taskFields.forEach(f => f.classList.remove("has-error"));
+
+    const submissions = [];
+    let firstEmpty = null;
+    taskFields.forEach(field => {
       const taskId = Number(field.dataset.taskId);
       const submissionText = field.querySelector("textarea").value.trim();
-      if (!submissionText) { ok = false; continue; }
+      if (submissionText) {
+        submissions.push({ taskId, submissionText });
+      } else {
+        field.classList.add("has-error");
+        firstEmpty = firstEmpty || field;
+      }
+    });
+
+    if (firstEmpty) {
+      showError("Заполните решение для каждого задания — незаполненные отмечены ниже.");
+      firstEmpty.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    for (const s of submissions) {
       const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/practical-submission`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, submissionText }),
+        body: JSON.stringify(s),
       });
-      if (!res.ok) ok = false;
-    }
-    if (!ok) {
-      showError("Заполните решение для каждого задания перед отправкой.");
-      return;
+      if (!res.ok) {
+        showError("Не удалось отправить решение. Попробуйте ещё раз.");
+        return;
+      }
     }
     goToStep(4);
   });

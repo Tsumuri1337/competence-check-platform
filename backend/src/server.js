@@ -13,7 +13,7 @@ const {
   getSelfAssessmentItems,
   submitSelfAssessment,
 } = require("./routes/assessments");
-const { listAssessments, getAssessmentReport, scorePracticalSubmission } = require("./routes/reviewers");
+const { listAssessments, getAssessmentReport, scorePracticalSubmission, setDecision } = require("./routes/reviewers");
 
 const PORT = process.env.PORT || 3001;
 
@@ -43,6 +43,7 @@ app.get("/api/assessments/:id/self-assessment", getSelfAssessmentItems);
 app.post("/api/assessments/:id/self-assessment", submitSelfAssessment);
 app.get("/api/assessments/:id/report", getAssessmentReport);
 app.post("/api/assessments/:assessmentId/practical-submissions/:submissionId/score", scorePracticalSubmission);
+app.post("/api/assessments/:id/decision", setDecision);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Маршрут не найден" });

@@ -68,6 +68,9 @@
   .badge.completed{background:var(--success-soft);color:var(--success);}
   .badge.employee{background:var(--primary-soft);color:var(--primary);}
   .badge.candidate{background:var(--accent-soft);color:#5c3f11;}
+  .badge.decision-accepted{background:var(--success-soft);color:var(--success);}
+  .badge.decision-rejected{background:var(--danger-soft);color:var(--danger);}
+  .badge.decision-pending{background:var(--warn-soft);color:var(--warn);}
 
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:28px 32px;min-height:560px;box-shadow:0 1px 3px rgba(27,36,48,.04);}
   .panel-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px;}
@@ -105,9 +108,43 @@
   .rating-kind{font-size:9.5px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;margin-right:8px;}
   .rating-value{font-weight:700;color:var(--primary);flex-shrink:0;}
 
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+  @media (max-width:700px){.summary-grid{grid-template-columns:1fr;}}
+  .summary-item{background:var(--primary-soft);border-radius:var(--radius);padding:14px 16px;text-align:center;}
+  .summary-label{display:block;font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
+  .summary-value{font-size:18px;font-weight:700;color:var(--primary);}
+
+  .decision-label{font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:10px;}
+  .decision-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .dbtn{border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);padding:9px 16px;border-radius:var(--radius);font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;}
+  .dbtn:hover{border-color:var(--primary);}
+  .dbtn.accept.selected{background:var(--success);border-color:var(--success);color:#fff;}
+  .dbtn.reject.selected{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .dbtn.pending.selected{background:var(--warn);border-color:var(--warn);color:#fff;}
+
+  .btn-outline{border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);padding:9px 16px;border-radius:var(--radius);font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;}
+  .btn-outline:hover{border-color:var(--primary);background:var(--primary-soft);}
+
+  .task-score-print{display:none;}
+
   .empty{display:flex;align-items:center;justify-content:center;height:500px;color:var(--ink-soft);font-size:13px;text-align:center;padding:0 40px;}
   .note{margin-top:28px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
   .hidden{display:none !important;}
+
+  /* Печать / «Скачать PDF»: только сводка на 1-2 страницы — без списка,
+     фильтров, полного текста заданий и построчной самооценки. */
+  @page{size:A4;margin:16mm;}
+  @media print{
+    body{background:#fff;}
+    .doc-eyebrow, .who, .filters, .note, .banner{display:none !important;}
+    .layout{display:block;}
+    .list{display:none !important;}
+    .panel{border:none;box-shadow:none;padding:0;min-height:0;}
+    .task-rubric, .task-submission, .score-row, .lf-group{display:none !important;}
+    .task-score-print{display:block;font-size:13px;font-weight:600;margin-top:4px;color:var(--primary);}
+    .btn-outline, .dbtn{display:none !important;}
+    .list-row.active{border-left:none;padding-left:18px;}
+  }
 </style>
 </head>
 <body>
@@ -159,6 +196,7 @@
 
   const CONTEXT_LABEL = { employee: "Сотрудник", candidate: "Кандидат" };
   const STATUS_LABEL = { in_progress: "В процессе", completed: "Завершена" };
+  const DECISION_LABEL = { accepted: "Принят", rejected: "Отклонён", pending: "На рассмотрении" };
 
   let assessments = [];
   let activeId = null;
@@ -214,6 +252,7 @@
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <span class="badge ${a.context}">${CONTEXT_LABEL[a.context]}</span>
           <span class="badge ${a.status}">${STATUS_LABEL[a.status]}</span>
+          ${a.context === "candidate" && a.decision ? `<span class="badge decision-${a.decision}">${DECISION_LABEL[a.decision]}</span>` : ""}
         </div>
       </div>`).join("");
     listEl.querySelectorAll(".list-row").forEach(row => {
@@ -239,15 +278,56 @@
     }
   }
 
+  const DEFAULT_TITLE = document.title;
+
   function renderPanel(){
-    if (!activeReport) { panelEl.innerHTML = '<div class="empty">Выберите проверку слева, чтобы увидеть отчёт.</div>'; return; }
-    const { assessment, quiz, practicalSubmissions, selfAssessment } = activeReport;
+    if (!activeReport) {
+      panelEl.innerHTML = '<div class="empty">Выберите проверку слева, чтобы увидеть отчёт.</div>';
+      document.title = DEFAULT_TITLE;
+      return;
+    }
+    const { assessment, quiz, practicalSubmissions, selfAssessment, summary } = activeReport;
+    document.title = `${assessment.full_name} — комплексный отчёт`;
 
     const lfGroups = new Map();
     for (const r of selfAssessment) {
       if (!lfGroups.has(r.labor_function_code)) lfGroups.set(r.labor_function_code, { title: r.labor_function_title, items: [] });
       lfGroups.get(r.labor_function_code).items.push(r);
     }
+
+    // Комплексный отчёт — сводка по обоим контекстам; решение (кнопки
+    // найма) — только для кандидатов, для сотрудников это просто сводка
+    // без каких-либо действий (см. README).
+    const isCandidate = assessment.context === "candidate";
+    const decisionSection = `
+      <div class="section-block">
+        <div class="section-title">Комплексный отчёт${isCandidate ? " по кандидату" : " по сотруднику"}</div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">Тестирование</span>
+            <span class="summary-value">${summary.quizPercent === null ? "—" : summary.quizPercent + "%"}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Практическое задание</span>
+            <span class="summary-value">${summary.allPracticalReviewed ? summary.practicalAverage + "/100" : "не оценено"}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Самооценка</span>
+            <span class="summary-value">${summary.selfAssessmentTaken ? summary.selfAssessmentAverage + "/5" : "не пройдена"}</span>
+          </div>
+        </div>
+        ${isCandidate ? `
+        <div class="decision-label">Решение по кандидату</div>
+        <div class="decision-btns">
+          <button class="dbtn accept ${assessment.decision === "accepted" ? "selected" : ""}" data-d="accepted">Принять</button>
+          <button class="dbtn reject ${assessment.decision === "rejected" ? "selected" : ""}" data-d="rejected">Отклонить</button>
+          <button class="dbtn pending ${assessment.decision === "pending" ? "selected" : ""}" data-d="pending">Оставить на рассмотрении</button>
+        </div>` : ""}
+        <div style="margin-top:16px;">
+          <button type="button" class="btn-outline" id="download-pdf-btn">Скачать PDF</button>
+        </div>
+      </div>
+    `;
 
     panelEl.innerHTML = `
       <div class="panel-head">
@@ -259,6 +339,7 @@
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <span class="badge ${assessment.context}">${CONTEXT_LABEL[assessment.context]}</span>
           <span class="badge ${assessment.status}">${STATUS_LABEL[assessment.status]}</span>
+          ${assessment.context === "candidate" && assessment.decision ? `<span class="badge decision-${assessment.decision}">${DECISION_LABEL[assessment.decision]}</span>` : ""}
         </div>
       </div>
 
@@ -283,7 +364,8 @@
                 <textarea placeholder="Комментарий ревьюера…" class="notes-input">${ps.reviewer_notes ?? ''}</textarea>
                 <button type="button" class="save-score-btn">Сохранить</button>
               </div>
-              <div class="score-saved hidden">Сохранено.</div>
+              ${ps.reviewer_score !== null ? '<div class="score-saved">Оценка сохранена.</div>' : ''}
+              <div class="task-score-print">Оценка: ${ps.reviewer_score !== null ? ps.reviewer_score + "/100" : "не оценено"}</div>
             </div>`).join("")}
       </div>
 
@@ -299,7 +381,16 @@
               </div>`).join("")}
           </div>`).join("") || '<div style="font-size:13px;color:var(--ink-soft);">Самооценка пока не пройдена.</div>'}
       </div>
+
+      ${decisionSection}
     `;
+
+    panelEl.querySelectorAll(".dbtn").forEach(btn => {
+      btn.addEventListener("click", () => submitDecision(assessment.id, btn.dataset.d));
+    });
+
+    const pdfBtn = document.getElementById("download-pdf-btn");
+    if (pdfBtn) pdfBtn.addEventListener("click", () => window.print());
 
     panelEl.querySelectorAll(".task-card").forEach(card => {
       card.querySelector(".save-score-btn").addEventListener("click", async () => {
@@ -314,13 +405,32 @@
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "Не удалось сохранить оценку");
-          card.querySelector(".score-saved").classList.remove("hidden");
           hideError();
+          // Перерисовываем панель, чтобы комплексный отчёт (средний балл по
+          // практическому заданию) сразу отразил новую оценку.
+          await selectAssessment(activeId);
         } catch (err) {
           showError(err.message);
         }
       });
     });
+  }
+
+  async function submitDecision(id, decision){
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${id}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...AUTH_HEADERS },
+        body: JSON.stringify({ decision }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сохранить решение");
+      hideError();
+      await refreshList();
+      await selectAssessment(id);
+    } catch (err) {
+      showError(err.message);
+    }
   }
 
   async function refreshList(){
