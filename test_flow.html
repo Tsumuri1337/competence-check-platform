@@ -51,6 +51,14 @@
   .step.skipped .step-dot::after{content:"–";}
   .step-label{font-size:11.5px;color:var(--ink-soft);text-align:center;max-width:88px;}
   .step.active .step-label{color:var(--ink);font-weight:600;}
+  @media (max-width:480px){
+    .shell{padding:40px 16px 100px;}
+    .steps{margin-bottom:32px;}
+    .step{padding:0 2px;gap:5px;}
+    .step-dot{width:20px;height:20px;font-size:10.5px;}
+    .steps::before{top:10px;}
+    .step-label{font-size:9.5px;max-width:56px;line-height:1.3;}
+  }
 
   .card{
     background:var(--surface);
@@ -97,10 +105,23 @@
   .info-box{border-left:3px solid var(--accent);background:var(--accent-soft);padding:18px 20px;border-radius:0 var(--radius) var(--radius) 0;}
   .info-box p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:#4a3a1f;}
 
-  .lf-group{margin-bottom:28px;}
+  .sa-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;font-size:12.5px;color:var(--ink-soft);flex-wrap:wrap;}
+  .sa-toolbar-actions{display:flex;gap:14px;}
+  .link-btn{background:none;border:none;color:var(--primary);font-size:12.5px;font-family:inherit;cursor:pointer;padding:0;text-decoration:underline;}
+  .link-btn:hover{color:var(--accent);}
+
+  .lf-group{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
   .lf-group:last-child{margin-bottom:0;}
-  .lf-heading{font-size:11.5px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
-  .lf-title{font-size:14.5px;font-weight:600;margin-bottom:14px;}
+  .lf-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:var(--primary-soft);border:none;padding:12px 16px;cursor:pointer;font-family:inherit;text-align:left;}
+  .lf-toggle-left{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+  .lf-heading{font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+  .lf-title{font-size:13.5px;font-weight:600;}
+  .lf-group-badge{font-size:11px;font-weight:600;color:var(--ink-soft);background:#fff;border-radius:10px;padding:3px 9px;flex-shrink:0;white-space:nowrap;}
+  .lf-group.complete .lf-group-badge{color:var(--success);}
+  .lf-toggle-icon{font-size:11px;color:var(--ink-soft);transition:transform .15s;flex-shrink:0;}
+  .lf-group.open .lf-toggle-icon{transform:rotate(180deg);}
+  .lf-body{display:none;padding:4px 16px 8px;}
+  .lf-group.open .lf-body{display:block;}
 
   .quiz-q{padding:20px 0;border-top:1px solid var(--line);}
   .quiz-q:first-child{border-top:none;padding-top:0;}
@@ -438,26 +459,69 @@
     }
 
     const body = document.getElementById("self-assessment-body");
-    body.innerHTML = [...groups.entries()].map(([code, group]) => `
-      <div class="lf-group">
-        <div class="lf-heading">${code}</div>
-        <div class="lf-title">${group.title}</div>
-        ${group.items.map(item => `
-          <div class="rating-row" data-item-id="${item.id}">
-            <div class="rating-text"><span class="rating-kind">${item.kind === "knowledge" ? "знание" : "умение"}</span>${item.text}</div>
-            <div class="rating-scale">
-              ${[1,2,3,4,5].map(n => `<button type="button" data-value="${n}">${n}</button>`).join("")}
-            </div>
-          </div>`).join("")}
+    body.innerHTML = `
+      <div class="sa-toolbar">
+        <span id="sa-progress">0 / ${selfAssessmentItems.length} оценено</span>
+        <div class="sa-toolbar-actions">
+          <button type="button" class="link-btn" id="sa-expand-all">Развернуть все</button>
+          <button type="button" class="link-btn" id="sa-collapse-all">Свернуть все</button>
+        </div>
+      </div>
+    ` + [...groups.entries()].map(([code, group]) => `
+      <div class="lf-group" data-code="${code}">
+        <button type="button" class="lf-toggle">
+          <span class="lf-toggle-left">
+            <span class="lf-heading">${code}</span>
+            <span class="lf-title">${group.title}</span>
+          </span>
+          <span class="lf-group-badge">0/${group.items.length}</span>
+          <span class="lf-toggle-icon">▾</span>
+        </button>
+        <div class="lf-body">
+          ${group.items.map(item => `
+            <div class="rating-row" data-item-id="${item.id}">
+              <div class="rating-text"><span class="rating-kind">${item.kind === "knowledge" ? "знание" : "умение"}</span>${item.text}</div>
+              <div class="rating-scale">
+                ${[1,2,3,4,5].map(n => `<button type="button" data-value="${n}">${n}</button>`).join("")}
+              </div>
+            </div>`).join("")}
+        </div>
       </div>`).join("");
+
+    body.querySelectorAll(".lf-toggle").forEach(toggle => {
+      toggle.addEventListener("click", () => toggle.closest(".lf-group").classList.toggle("open"));
+    });
+    document.getElementById("sa-expand-all").addEventListener("click", () => {
+      body.querySelectorAll(".lf-group").forEach(g => g.classList.add("open"));
+    });
+    document.getElementById("sa-collapse-all").addEventListener("click", () => {
+      body.querySelectorAll(".lf-group").forEach(g => g.classList.remove("open"));
+    });
 
     body.querySelectorAll(".rating-scale button").forEach(btn => {
       btn.addEventListener("click", () => {
         btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
-        btn.closest(".rating-row").classList.remove("has-error");
+        const row = btn.closest(".rating-row");
+        row.classList.remove("has-error");
+        updateGroupBadge(row.closest(".lf-group"));
+        updateSaProgress();
       });
     });
+  }
+
+  function updateGroupBadge(groupEl){
+    const rows = groupEl.querySelectorAll(".rating-row");
+    const done = [...rows].filter(r => r.querySelector(".rating-scale button.selected")).length;
+    groupEl.querySelector(".lf-group-badge").textContent = `${done}/${rows.length}`;
+    groupEl.classList.toggle("complete", done === rows.length);
+  }
+
+  function updateSaProgress(){
+    const rows = document.querySelectorAll("#self-assessment-body .rating-row");
+    const done = [...rows].filter(r => r.querySelector(".rating-scale button.selected")).length;
+    const progressEl = document.getElementById("sa-progress");
+    if (progressEl) progressEl.textContent = `${done} / ${rows.length} оценено`;
   }
 
   document.getElementById("self-assessment-submit-btn").addEventListener("click", async () => {
@@ -476,6 +540,8 @@
       }
     }
     if (firstUnanswered) {
+      const group = firstUnanswered.closest(".lf-group");
+      if (group) group.classList.add("open");
       showError("Оцените каждый пункт перед тем, как продолжить — неоценённые отмечены ниже.");
       firstUnanswered.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
