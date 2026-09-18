@@ -93,6 +93,17 @@ CREATE TABLE IF NOT EXISTS assessments (
 -- для сотрудников пока не используется (см. backend/README.md).
 ALTER TABLE assessments ADD COLUMN IF NOT EXISTS decision TEXT CHECK (decision IN ('accepted', 'rejected', 'pending'));
 
+-- Случайная выборка вопросов теста и практических заданий для этой
+-- конкретной проверки — выбирается один раз (при первом запросе) и
+-- сохраняется здесь, чтобы обновление страницы или восстановление
+-- прогресса показывало тот же набор в том же порядке, а не новую выборку.
+-- quiz_assignment: [{ "questionId": 1, "optionOrder": [2,0,3,1] }, ...] —
+-- optionOrder переставляет варианты ответа для показа; переводится обратно
+-- в исходный индекс при сохранении ответа (см. routes/assessments.js).
+-- task_assignment: [taskId, taskId] — просто порядок показа.
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS quiz_assignment JSONB;
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS task_assignment JSONB;
+
 CREATE TABLE IF NOT EXISTS quiz_responses (
   id SERIAL PRIMARY KEY,
   assessment_id INTEGER NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,

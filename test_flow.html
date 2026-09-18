@@ -47,8 +47,7 @@
     display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--ink-soft);}
   .step.done .step-dot{background:var(--success);border-color:var(--success);color:#fff;}
   .step.active .step-dot{background:var(--primary);border-color:var(--primary);color:#fff;}
-  .step.skipped .step-dot{background:var(--surface);border-color:var(--line-strong);color:var(--ink-soft);}
-  .step.skipped .step-dot::after{content:"–";}
+  .step.skipped .step-dot{background:var(--line-strong);border-color:var(--line-strong);color:var(--surface);opacity:.75;}
   .step-label{font-size:11.5px;color:var(--ink-soft);text-align:center;max-width:88px;}
   .step.active .step-label{color:var(--ink);font-weight:600;}
   @media (max-width:480px){
@@ -123,12 +122,25 @@
   .lf-body{display:none;padding:4px 16px 8px;}
   .lf-group.open .lf-body{display:block;}
 
-  .quiz-q{padding:20px 0;border-top:1px solid var(--line);}
-  .quiz-q:first-child{border-top:none;padding-top:0;}
-  .quiz-q.has-error{border-left:3px solid var(--danger);background:var(--danger-soft);padding-left:14px;}
   .quiz-q-text{font-size:14.5px;font-weight:500;margin-bottom:14px;}
   .quiz-opt{display:flex;align-items:flex-start;gap:10px;padding:9px 0;font-size:13.5px;cursor:pointer;}
   .quiz-opt input{margin-top:3px;accent-color:var(--primary);}
+
+  .quiz-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+  .quiz-progress{font-size:12.5px;font-weight:600;color:var(--ink-soft);background:var(--primary-soft);padding:6px 12px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
+  .quiz-nav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;}
+  .quiz-review-title{font-size:15px;font-weight:600;margin:0 0 4px;}
+  .quiz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:8px;margin:20px 0;}
+  .quiz-grid-item{width:42px;height:42px;border-radius:8px;border:1.5px solid var(--line-strong);background:#fff;
+    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink-soft);}
+  .quiz-grid-item.answered{background:var(--success-soft);border-color:var(--success);color:var(--success);}
+  .quiz-grid-item.has-error{background:var(--danger-soft);border-color:var(--danger);color:var(--danger);}
+  .quiz-grid-item.current{box-shadow:0 0 0 2px var(--primary-soft);border-color:var(--primary);}
+  @media (max-width:480px){
+    .quiz-head{flex-direction:column;gap:8px;}
+    .quiz-grid{grid-template-columns:repeat(auto-fill,minmax(36px,1fr));}
+    .quiz-grid-item{width:36px;height:36px;}
+  }
 
   .rating-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line);}
   .rating-row:first-child{border-top:none;padding-top:0;}
@@ -156,6 +168,10 @@
   .banner{padding:13px 16px;border-radius:var(--radius);font-size:13px;margin-bottom:20px;}
   .banner.error{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);}
   .banner.success{background:var(--success-soft);color:var(--success);border:1px solid var(--success);}
+  .banner.info{background:var(--accent-soft);color:#5c3f11;border:1px solid var(--accent);}
+  .banner.info .btn-row{margin-top:12px;}
+
+  .restart-link{margin-bottom:20px;}
 
   .score-display{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;}
   .score-number{font-size:36px;font-weight:700;color:var(--primary);}
@@ -177,7 +193,19 @@
     <p class="doc-sub">Самооценка (по желанию), тестирование и практическое задание — на основе действующих профессиональных стандартов Минтруда России в области информационной безопасности.</p>
   </div>
 
+  <div class="banner info hidden" id="resume-banner">
+    <span id="resume-text"></span>
+    <div class="btn-row left">
+      <button type="button" class="btn" id="resume-continue-btn">Продолжить</button>
+      <button type="button" class="btn btn-secondary" id="resume-restart-btn">Начать заново</button>
+    </div>
+  </div>
+
   <div class="banner error hidden" id="load-error"></div>
+
+  <div class="restart-link hidden" id="restart-link">
+    <button type="button" class="link-btn" id="restart-btn">← Начать заново (выбрать другую роль или профстандарт)</button>
+  </div>
 
   <div class="steps" id="steps">
     <div class="step active" data-step="0"><div class="step-dot">1</div><div class="step-label">Анкета</div></div>
@@ -254,13 +282,24 @@
 
   <!-- STEP 2: quiz -->
   <div class="card hidden" id="step-2">
-    <div class="card-head">
-      <h2 class="card-title">Тестирование</h2>
-      <p class="card-sub">Выберите один верный вариант ответа для каждого вопроса.</p>
+    <div class="card-head quiz-head">
+      <div>
+        <h2 class="card-title">Тестирование</h2>
+        <p class="card-sub">Выберите один верный вариант ответа. Можно пропустить вопрос и вернуться к нему позже.</p>
+      </div>
+      <div class="quiz-progress" id="quiz-progress">Вопрос 1 из 1</div>
     </div>
-    <div id="quiz-body"></div>
-    <div class="btn-row">
-      <button class="btn" id="quiz-submit-btn">Отправить ответы</button>
+
+    <div id="quiz-question"></div>
+    <div id="quiz-review" class="hidden"></div>
+
+    <div class="quiz-nav" id="quiz-nav-questions">
+      <button type="button" class="btn btn-secondary" id="quiz-back-btn">← Назад</button>
+      <button type="button" class="btn" id="quiz-next-btn">Далее →</button>
+    </div>
+    <div class="quiz-nav hidden" id="quiz-nav-review">
+      <button type="button" class="btn btn-secondary" id="quiz-review-back-btn">← Назад к вопросам</button>
+      <button type="button" class="btn" id="quiz-submit-btn">Отправить ответы</button>
     </div>
   </div>
 
@@ -298,17 +337,40 @@
 
 <script>
   const API_BASE = "http://localhost:3001";
+  const PROGRESS_KEY = "competence_check_progress";
 
   let assessmentId = null;
   let selectedContext = "employee";
   let selectedStandard = null;
   let quizQuestions = [];
+  let quizAnswers = [];
+  let currentQuizIndex = 0;
   let practicalTasks = [];
   let selfAssessmentItems = [];
+  let quizScore = null;
 
   const loadError = document.getElementById("load-error");
   function showError(msg){ loadError.textContent = msg; loadError.classList.remove("hidden"); }
   function hideError(){ loadError.classList.add("hidden"); }
+
+  // Восстановление после обновления страницы: на каждый реальный переход
+  // между шагами сохраняем достаточно, чтобы вернуться сюда же, а не
+  // терять анкету/самооценку/тест при случайном обновлении вкладки.
+  function saveProgress(step){
+    try {
+      if (!assessmentId) return;
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ assessmentId, step, quizScore, quizAnswers, currentQuizIndex }));
+    } catch (e) { /* localStorage недоступен — просто не восстанавливаемся */ }
+  }
+  function loadSavedProgress(){
+    try {
+      const raw = localStorage.getItem(PROGRESS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function clearSavedProgress(){
+    try { localStorage.removeItem(PROGRESS_KEY); } catch (e) { /* ignore */ }
+  }
 
   function goToStep(n, opts){
     const skip1 = opts && opts.skippedStep1;
@@ -320,7 +382,30 @@
       if (i < n) stepEl.classList.add("done");
       if (i === n) stepEl.classList.add("active");
     }
+    document.getElementById("restart-link").classList.toggle("hidden", n === 0);
+    saveProgress(n);
   }
+
+  function resetToRegistration(){
+    clearSavedProgress();
+    assessmentId = null;
+    quizScore = null;
+    quizQuestions = [];
+    quizAnswers = [];
+    currentQuizIndex = 0;
+    document.getElementById("f-fullname").value = "";
+    document.getElementById("f-email").value = "";
+    document.getElementById("f-org").value = "";
+    [document.getElementById("f-fullname"), document.getElementById("f-email"), document.getElementById("f-standard")]
+      .forEach(el => el.classList.remove("input-error"));
+    hideError();
+    goToStep(0);
+  }
+
+  document.getElementById("restart-btn").addEventListener("click", () => {
+    if (!confirm("Начать заново? Текущий прогресс в этой проверке будет потерян.")) return;
+    resetToRegistration();
+  });
 
   document.querySelectorAll("#context-group .radio-pill").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -561,48 +646,115 @@
     }
   });
 
-  async function loadQuiz(){
+  // savedState (опционально): { quizAnswers, currentQuizIndex } из
+  // localStorage — восстанавливает ответы и позицию при возврате после
+  // обновления страницы. Без него (обычный первый заход) начинаем с чистого
+  // листа — набор вопросов на сервере тот же самый и в том же порядке
+  // (см. ensureQuizAssignment на бэкенде), так что индексы совпадают.
+  async function loadQuiz(savedState){
     const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz`);
     if (!res.ok) throw new Error("Не удалось загрузить тестирование");
     quizQuestions = await res.json();
-    const body = document.getElementById("quiz-body");
-    body.innerHTML = quizQuestions.map((q, qi) => `
-      <div class="quiz-q">
-        <div class="quiz-q-text">${qi + 1}. ${q.text}</div>
+    if (savedState && Array.isArray(savedState.quizAnswers) && savedState.quizAnswers.length === quizQuestions.length) {
+      quizAnswers = savedState.quizAnswers;
+      currentQuizIndex = Math.min(savedState.currentQuizIndex || 0, quizQuestions.length - 1);
+    } else {
+      quizAnswers = quizQuestions.map(() => null);
+      currentQuizIndex = 0;
+    }
+    renderQuizQuestion();
+  }
+
+  function renderQuizQuestion(){
+    document.getElementById("quiz-nav-review").classList.add("hidden");
+    document.getElementById("quiz-nav-questions").classList.remove("hidden");
+    document.getElementById("quiz-review").classList.add("hidden");
+
+    const total = quizQuestions.length;
+    const q = quizQuestions[currentQuizIndex];
+    document.getElementById("quiz-progress").textContent = `Вопрос ${currentQuizIndex + 1} из ${total}`;
+
+    const question = document.getElementById("quiz-question");
+    question.classList.remove("hidden");
+    question.innerHTML = `
+      <div class="quiz-q-single">
+        <div class="quiz-q-text">${q.text}</div>
         ${q.options.map((opt, oi) => `
           <label class="quiz-opt">
-            <input type="radio" name="q-${q.id}" value="${oi}" />
+            <input type="radio" name="quiz-current" value="${oi}" ${quizAnswers[currentQuizIndex] === oi ? "checked" : ""} />
             <span>${opt}</span>
           </label>`).join("")}
-      </div>`).join("");
+      </div>`;
 
-    body.querySelectorAll("input[type=radio]").forEach(input => {
-      input.addEventListener("change", () => input.closest(".quiz-q").classList.remove("has-error"));
+    question.querySelectorAll("input[type=radio]").forEach(input => {
+      input.addEventListener("change", () => {
+        quizAnswers[currentQuizIndex] = Number(input.value);
+        saveProgress(2);
+      });
     });
+
+    document.getElementById("quiz-back-btn").disabled = currentQuizIndex === 0;
+    document.getElementById("quiz-next-btn").textContent = currentQuizIndex === total - 1 ? "К проверке ответов →" : "Далее →";
+    saveProgress(2);
   }
+
+  function renderQuizReview(){
+    document.getElementById("quiz-question").classList.add("hidden");
+    document.getElementById("quiz-nav-questions").classList.add("hidden");
+    document.getElementById("quiz-nav-review").classList.remove("hidden");
+
+    const total = quizQuestions.length;
+    const answeredCount = quizAnswers.filter(a => a !== null).length;
+    document.getElementById("quiz-progress").textContent = `Отвечено ${answeredCount} из ${total}`;
+
+    const review = document.getElementById("quiz-review");
+    review.classList.remove("hidden");
+    review.innerHTML = `
+      <div class="quiz-review-head">
+        <h3 class="quiz-review-title">Проверьте ответы перед отправкой</h3>
+        <p class="card-sub">Отвечено ${answeredCount} из ${total}. Нажмите на номер, чтобы вернуться к вопросу и изменить ответ.</p>
+      </div>
+      <div class="quiz-grid" id="quiz-grid">
+        ${quizQuestions.map((q, i) => `
+          <button type="button" class="quiz-grid-item ${quizAnswers[i] !== null ? "answered" : ""}" data-index="${i}">${i + 1}</button>
+        `).join("")}
+      </div>`;
+
+    review.querySelectorAll(".quiz-grid-item").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentQuizIndex = Number(btn.dataset.index);
+        renderQuizQuestion();
+      });
+    });
+    saveProgress(2);
+  }
+
+  document.getElementById("quiz-back-btn").addEventListener("click", () => {
+    if (currentQuizIndex > 0) { currentQuizIndex--; renderQuizQuestion(); }
+  });
+
+  document.getElementById("quiz-next-btn").addEventListener("click", () => {
+    if (currentQuizIndex < quizQuestions.length - 1) { currentQuizIndex++; renderQuizQuestion(); }
+    else { renderQuizReview(); }
+  });
+
+  document.getElementById("quiz-review-back-btn").addEventListener("click", () => {
+    currentQuizIndex = quizQuestions.length - 1;
+    renderQuizQuestion();
+  });
 
   document.getElementById("quiz-submit-btn").addEventListener("click", async () => {
     hideError();
-    const quizQEls = document.querySelectorAll("#quiz-body .quiz-q");
-    quizQEls.forEach(el => el.classList.remove("has-error"));
-
-    const responses = [];
-    let firstUnanswered = null;
-    quizQuestions.forEach((q, qi) => {
-      const checked = document.querySelector(`input[name="q-${q.id}"]:checked`);
-      if (checked) {
-        responses.push({ questionId: q.id, selectedIndex: Number(checked.value) });
-      } else {
-        quizQEls[qi].classList.add("has-error");
-        firstUnanswered = firstUnanswered || quizQEls[qi];
-      }
-    });
-
-    if (firstUnanswered) {
-      showError("Ответьте на все вопросы — пропущенные отмечены ниже.");
-      firstUnanswered.scrollIntoView({ behavior: "smooth", block: "center" });
+    const firstUnanswered = quizAnswers.findIndex(a => a === null);
+    if (firstUnanswered !== -1) {
+      showError("Ответьте на все вопросы — непройденные отмечены ниже.");
+      document.querySelectorAll("#quiz-grid .quiz-grid-item").forEach((btn, i) => {
+        btn.classList.toggle("has-error", quizAnswers[i] === null);
+      });
       return;
     }
+
+    const responses = quizQuestions.map((q, i) => ({ questionId: q.id, selectedIndex: quizAnswers[i] }));
 
     try {
       const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz-responses`, {
@@ -612,6 +764,7 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Не удалось отправить ответы");
+      quizScore = { correctCount: data.correctCount, total: data.total };
       document.getElementById("final-score").textContent = `${data.correctCount} / ${data.total}`;
       await loadPracticalTask();
       goToStep(3);
@@ -671,10 +824,77 @@
         return;
       }
     }
+    clearSavedProgress();
     goToStep(4);
   });
 
-  loadStandards().catch(err => showError(err.message + " — проверьте, что backend запущен на " + API_BASE));
+  // Восстановление незавершённой проверки после обновления страницы.
+  const STEP_LABELS = {
+    1: "на этапе самооценки",
+    2: "на этапе тестирования",
+    3: "на этапе практического задания",
+  };
+
+  async function resumeAt(saved, data){
+    const step = saved.step;
+    assessmentId = data.id;
+    selectedContext = data.context;
+    selectedStandard = { code: data.standard_code, title: data.standard_title };
+    try {
+      if (step === 1) {
+        document.getElementById("overview-text").textContent = overviewCopy(selectedContext, selectedStandard.title);
+        document.getElementById("selfcheck-offer-text").textContent = selfcheckOfferCopy(selectedContext);
+        document.getElementById("selfcheck-offer").classList.remove("hidden");
+        document.getElementById("self-assessment-section").classList.add("hidden");
+        goToStep(1);
+      } else if (step === 2) {
+        await loadQuiz(saved);
+        goToStep(2);
+      } else if (step === 3) {
+        await loadQuiz(saved);
+        if (quizScore) document.getElementById("final-score").textContent = `${quizScore.correctCount} / ${quizScore.total}`;
+        await loadPracticalTask();
+        goToStep(3);
+      } else {
+        resetToRegistration();
+      }
+    } catch (err) {
+      showError(err.message);
+      resetToRegistration();
+    }
+  }
+
+  function showResumePrompt(saved, data){
+    document.getElementById("resume-text").textContent =
+      `У вас есть незавершённая проверка «${data.standard_title}» (${STEP_LABELS[saved.step] || "в процессе"}). Продолжить с того же места?`;
+    document.getElementById("resume-banner").classList.remove("hidden");
+
+    document.getElementById("resume-continue-btn").onclick = async () => {
+      document.getElementById("resume-banner").classList.add("hidden");
+      await resumeAt(saved, data);
+    };
+    document.getElementById("resume-restart-btn").onclick = () => {
+      document.getElementById("resume-banner").classList.add("hidden");
+      resetToRegistration();
+    };
+  }
+
+  async function checkForSavedProgress(){
+    const saved = loadSavedProgress();
+    if (!saved || !saved.assessmentId || !saved.step) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${saved.assessmentId}`);
+      if (!res.ok) { clearSavedProgress(); return; }
+      const data = await res.json();
+      if (data.status === "completed") { clearSavedProgress(); return; }
+      quizScore = saved.quizScore || null;
+      showResumePrompt(saved, data);
+    } catch (e) { /* backend недоступен — просто не предлагаем восстановление */ }
+  }
+
+  loadStandards()
+    .then(checkForSavedProgress)
+    .catch(err => showError(err.message + " — проверьте, что backend запущен на " + API_BASE));
 </script>
 </body>
 </html>

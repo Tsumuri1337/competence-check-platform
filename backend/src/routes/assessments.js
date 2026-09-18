@@ -1,5 +1,38 @@
 const db = require("../db");
 
+// Каждая проверка получает случайную выборку из общего банка вопросов/
+// заданий — выбирается один раз и сохраняется в assessments.quiz_assignment
+// / task_assignment, чтобы обновление страницы или восстановление
+// прогресса показывало тот же набор в том же порядке, а не новую выборку.
+const QUIZ_SIZE = 50;
+const TASK_COUNT = 2;
+
+function shuffle(array) {
+  const result = array.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+async function ensureQuizAssignment(assessment) {
+  if (assessment.quiz_assignment) return assessment.quiz_assignment;
+  const { rows } = await db.query("SELECT id FROM quiz_questions WHERE standard_id = $1", [assessment.standard_id]);
+  const questionIds = shuffle(rows.map((r) => r.id)).slice(0, QUIZ_SIZE);
+  const assignment = questionIds.map((questionId) => ({ questionId, optionOrder: shuffle([0, 1, 2, 3]) }));
+  await db.query("UPDATE assessments SET quiz_assignment = $1 WHERE id = $2", [JSON.stringify(assignment), assessment.id]);
+  return assignment;
+}
+
+async function ensureTaskAssignment(assessment) {
+  if (assessment.task_assignment) return assessment.task_assignment;
+  const { rows } = await db.query("SELECT id FROM practical_tasks WHERE standard_id = $1", [assessment.standard_id]);
+  const assignment = shuffle(rows.map((r) => r.id)).slice(0, TASK_COUNT);
+  await db.query("UPDATE assessments SET task_assignment = $1 WHERE id = $2", [JSON.stringify(assignment), assessment.id]);
+  return assignment;
+}
+
 // POST /api/assessments
 // body: { standardCode, context: 'employee'|'candidate', person: { fullName, email, organizationName? } }
 async function startAssessment(req, res) {
@@ -69,24 +102,38 @@ async function getAssessment(req, res) {
   res.json(assessment);
 }
 
-// GET /api/assessments/:id/quiz — вопросы без правильных ответов
+// GET /api/assessments/:id/quiz — случайная выборка из банка вопросов
+// (см. ensureQuizAssignment), без правильных ответов, с вариантами в
+// перемешанном для этой проверки порядке.
 async function getQuiz(req, res) {
   const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query("SELECT standard_id FROM assessments WHERE id = $1", [assessmentId]);
+  const assessmentResult = await db.query(
+    "SELECT id, standard_id, quiz_assignment FROM assessments WHERE id = $1",
+    [assessmentId]
+  );
   const assessment = assessmentResult.rows[0];
   if (!assessment) {
     res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
-  const { rows } = await db.query(
-    "SELECT id, text, options FROM quiz_questions WHERE standard_id = $1 ORDER BY id",
-    [assessment.standard_id]
-  );
-  res.json(rows);
+  const assignment = await ensureQuizAssignment(assessment);
+
+  const { rows } = await db.query("SELECT id, text, options FROM quiz_questions WHERE id = ANY($1)", [
+    assignment.map((a) => a.questionId),
+  ]);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  const result = assignment.map(({ questionId, optionOrder }) => {
+    const q = byId.get(questionId);
+    return { id: q.id, text: q.text, options: optionOrder.map((i) => q.options[i]) };
+  });
+  res.json(result);
 }
 
 // POST /api/assessments/:id/quiz-responses
-// body: { responses: [{ questionId, selectedIndex }] }
+// body: { responses: [{ questionId, selectedIndex }] } — selectedIndex is
+// relative to the shuffled options this assessment was shown; translated
+// back to the question's canonical option order before scoring/storing.
 async function submitQuizResponses(req, res) {
   const assessmentId = Number(req.params.id);
   const { responses } = req.body || {};
@@ -95,25 +142,30 @@ async function submitQuizResponses(req, res) {
     return;
   }
 
-  const assessmentResult = await db.query("SELECT id FROM assessments WHERE id = $1", [assessmentId]);
-  if (!assessmentResult.rows[0]) {
+  const assessmentResult = await db.query("SELECT id, quiz_assignment FROM assessments WHERE id = $1", [assessmentId]);
+  const assessment = assessmentResult.rows[0];
+  if (!assessment) {
     res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
+  const optionOrderByQuestion = new Map((assessment.quiz_assignment || []).map((a) => [a.questionId, a.optionOrder]));
 
   const score = await db.transaction(async (client) => {
     let correctCount = 0;
     for (const r of responses) {
+      const optionOrder = optionOrderByQuestion.get(r.questionId);
+      if (!optionOrder) continue; // вопрос не входит в выборку этой проверки
+      const canonicalIndex = optionOrder[r.selectedIndex];
       const qResult = await client.query("SELECT correct_index FROM quiz_questions WHERE id = $1", [r.questionId]);
       const question = qResult.rows[0];
       if (!question) continue;
-      const isCorrect = question.correct_index === r.selectedIndex;
+      const isCorrect = question.correct_index === canonicalIndex;
       if (isCorrect) correctCount += 1;
       await client.query(
         `INSERT INTO quiz_responses (assessment_id, question_id, selected_index, is_correct)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (assessment_id, question_id) DO UPDATE SET selected_index = $3, is_correct = $4`,
-        [assessmentId, r.questionId, r.selectedIndex, isCorrect]
+        [assessmentId, r.questionId, canonicalIndex, isCorrect]
       );
     }
     return { correctCount, total: responses.length };
@@ -122,26 +174,31 @@ async function submitQuizResponses(req, res) {
   res.json({ assessmentId, ...score });
 }
 
-// GET /api/assessments/:id/practical-task
+// GET /api/assessments/:id/practical-task — случайная выборка из банка
+// заданий (см. ensureTaskAssignment).
 async function getPracticalTask(req, res) {
   const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query("SELECT standard_id FROM assessments WHERE id = $1", [assessmentId]);
+  const assessmentResult = await db.query(
+    "SELECT id, standard_id, task_assignment FROM assessments WHERE id = $1",
+    [assessmentId]
+  );
   const assessment = assessmentResult.rows[0];
   if (!assessment) {
     res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
-  const { rows } = await db.query(
-    "SELECT id, prompt FROM practical_tasks WHERE standard_id = $1 ORDER BY id",
-    [assessment.standard_id]
-  );
-  res.json(rows);
+  const taskIds = await ensureTaskAssignment(assessment);
+
+  const { rows } = await db.query("SELECT id, prompt FROM practical_tasks WHERE id = ANY($1)", [taskIds]);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  res.json(taskIds.map((id) => byId.get(id)));
 }
 
 // POST /api/assessments/:id/practical-submission
 // body: { taskId, submissionText } — completes the assessment once every
-// practical task for the standard has a submission (quiz is required first;
-// self-assessment is optional and doesn't gate completion).
+// task ASSIGNED to this assessment (see ensureTaskAssignment, not every
+// task in the standard's whole bank) has a submission. Quiz is required
+// first; self-assessment is optional and doesn't gate completion.
 async function submitPracticalSubmission(req, res) {
   const assessmentId = Number(req.params.id);
   const { taskId, submissionText } = req.body || {};
@@ -150,12 +207,16 @@ async function submitPracticalSubmission(req, res) {
     return;
   }
 
-  const assessmentResult = await db.query("SELECT standard_id FROM assessments WHERE id = $1", [assessmentId]);
+  const assessmentResult = await db.query(
+    "SELECT id, standard_id, task_assignment FROM assessments WHERE id = $1",
+    [assessmentId]
+  );
   const assessment = assessmentResult.rows[0];
   if (!assessment) {
     res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
+  const assignedTaskIds = await ensureTaskAssignment(assessment);
 
   const submissionId = await db.transaction(async (client) => {
     const inserted = await client.query(
@@ -166,9 +227,11 @@ async function submitPracticalSubmission(req, res) {
       [assessmentId, taskId, submissionText]
     );
 
-    const totalTasks = await client.query("SELECT count(*) FROM practical_tasks WHERE standard_id = $1", [assessment.standard_id]);
-    const totalSubmissions = await client.query("SELECT count(*) FROM practical_submissions WHERE assessment_id = $1", [assessmentId]);
-    if (Number(totalSubmissions.rows[0].count) >= Number(totalTasks.rows[0].count)) {
+    const totalSubmissions = await client.query(
+      "SELECT count(*) FROM practical_submissions WHERE assessment_id = $1 AND task_id = ANY($2)",
+      [assessmentId, assignedTaskIds]
+    );
+    if (Number(totalSubmissions.rows[0].count) >= assignedTaskIds.length) {
       await client.query("UPDATE assessments SET status = 'completed' WHERE id = $1", [assessmentId]);
     }
 
