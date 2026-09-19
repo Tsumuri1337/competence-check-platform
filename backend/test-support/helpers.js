@@ -7,6 +7,7 @@
 // профстандартов не трогаются).
 const app = require("../src/server");
 const { pool } = require("../src/db");
+const { emailBlindIndex } = require("../src/lib/pii");
 
 async function startTestServer() {
   const server = app.listen(0);
@@ -42,7 +43,7 @@ async function cleanupAssessment(assessmentId) {
 }
 
 async function cleanupPerson(email) {
-  await pool.query("DELETE FROM people WHERE email = $1", [email]);
+  await pool.query("DELETE FROM people WHERE email_hash = $1", [emailBlindIndex(email)]);
 }
 
 module.exports = { startTestServer, uniqueEmail, loginReviewer, cleanupAssessment, cleanupPerson, pool };
