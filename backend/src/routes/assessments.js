@@ -1,4 +1,5 @@
 const db = require("../db");
+const { encrypt, emailBlindIndex } = require("../lib/pii");
 
 // Каждая проверка получает случайную выборку из общего банка вопросов/
 // заданий — выбирается один раз и сохраняется в assessments.quiz_assignment
@@ -63,13 +64,14 @@ async function startAssessment(req, res) {
         : (await client.query("INSERT INTO organizations (name) VALUES ($1) RETURNING id", [person.organizationName])).rows[0].id;
     }
 
-    const existingPerson = await client.query("SELECT id FROM people WHERE email = $1", [person.email]);
+    const emailHash = emailBlindIndex(person.email);
+    const existingPerson = await client.query("SELECT id FROM people WHERE email_hash = $1", [emailHash]);
     const personId = existingPerson.rows[0]
       ? existingPerson.rows[0].id
       : (
           await client.query(
-            "INSERT INTO people (full_name, email, context, organization_id) VALUES ($1, $2, $3, $4) RETURNING id",
-            [person.fullName, person.email, context, organizationId]
+            "INSERT INTO people (full_name, email, email_hash, context, organization_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            [encrypt(person.fullName), encrypt(person.email), emailHash, context, organizationId]
           )
         ).rows[0].id;
 
@@ -83,13 +85,13 @@ async function startAssessment(req, res) {
   res.status(201).json({ assessmentId, status: "in_progress" });
 }
 
-// GET /api/assessments/:id
+// GET /api/assessments/:id — без авторизации, поэтому ПДн (ФИО/email)
+// здесь намеренно не отдаём: их видит только ревьюер через /report.
 async function getAssessment(req, res) {
   const assessmentId = Number(req.params.id);
   const { rows } = await db.query(
-    `SELECT a.id, a.status, a.context, a.created_at, p.full_name, p.email, s.code as standard_code, s.title as standard_title
+    `SELECT a.id, a.status, a.context, a.created_at, s.code as standard_code, s.title as standard_title
      FROM assessments a
-     JOIN people p ON p.id = a.person_id
      JOIN standards s ON s.id = a.standard_id
      WHERE a.id = $1`,
     [assessmentId]

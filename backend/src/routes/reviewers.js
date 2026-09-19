@@ -1,6 +1,11 @@
 const db = require("../db");
 const { logAccess } = require("../lib/accessLog");
 const { resolveReviewerFromSession } = require("./auth");
+const { decrypt } = require("../lib/pii");
+
+function decryptPerson(row) {
+  return { ...row, full_name: decrypt(row.full_name), email: decrypt(row.email) };
+}
 
 async function requireReviewer(req, res) {
   const reviewer = await resolveReviewerFromSession(req);
@@ -40,7 +45,7 @@ async function listAssessments(req, res) {
   sql += " ORDER BY a.created_at DESC";
 
   const { rows } = await db.query(sql, args);
-  res.json(rows);
+  res.json(rows.map(decryptPerson));
 }
 
 // GET /api/assessments/:id/report — сводный отчёт: квиз + практическое
@@ -58,11 +63,12 @@ async function getAssessmentReport(req, res) {
      WHERE a.id = $1`,
     [assessmentId]
   );
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
+  const assessmentRow = assessmentResult.rows[0];
+  if (!assessmentRow) {
     res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
+  const assessment = decryptPerson(assessmentRow);
 
   const [quiz, submissions, ratings] = await Promise.all([
     db.query(

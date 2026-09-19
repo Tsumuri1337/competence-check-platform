@@ -66,10 +66,17 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS people (
   id SERIAL PRIMARY KEY,
   full_name TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL,
   context TEXT NOT NULL CHECK (context IN ('employee', 'candidate')),
   organization_id INTEGER REFERENCES organizations(id)
 );
+
+-- full_name и email хранятся зашифрованными (AES-256-GCM, см. src/lib/pii.js).
+-- Шифртекст со случайным IV не годится для поиска и UNIQUE, поэтому
+-- уникальность и поиск по email идут через детерминированный HMAC-хэш.
+ALTER TABLE people ADD COLUMN IF NOT EXISTS email_hash TEXT;
+ALTER TABLE people DROP CONSTRAINT IF EXISTS people_email_key;
+CREATE UNIQUE INDEX IF NOT EXISTS people_email_hash_key ON people(email_hash);
 
 CREATE TABLE IF NOT EXISTS reviewers (
   id SERIAL PRIMARY KEY,
