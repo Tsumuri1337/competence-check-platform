@@ -14,6 +14,8 @@ const {
   submitSelfAssessment,
 } = require("./routes/assessments");
 const { listAssessments, getAssessmentReport, scorePracticalSubmission, setDecision } = require("./routes/reviewers");
+const { login, logout, me } = require("./routes/auth");
+const { parseCookies } = require("./lib/cookies");
 
 const PORT = process.env.PORT || 3001;
 
@@ -22,12 +24,20 @@ const app = express();
 // другого origin и должны достучаться до API. Сузить при реальном деплое.
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  req.cookies = parseCookies(req.headers.cookie);
+  next();
+});
 
 // Раздаём обе страницы напрямую из корня проекта — временное решение для
 // локального просмотра, пока нет отдельного фронтенд-проекта.
 const PROJECT_ROOT = path.join(__dirname, "..", "..");
 app.get("/test_flow.html", (req, res) => res.sendFile(path.join(PROJECT_ROOT, "test_flow.html")));
 app.get("/reviewer_dashboard.html", (req, res) => res.sendFile(path.join(PROJECT_ROOT, "reviewer_dashboard.html")));
+
+app.post("/api/auth/login", login);
+app.post("/api/auth/logout", logout);
+app.get("/api/auth/me", me);
 
 app.get("/api/standards", listStandards);
 app.get("/api/standards/:code", getStandardByCode);

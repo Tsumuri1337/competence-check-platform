@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { query, pool } = require("./db");
+const { hashPassword } = require("./lib/auth");
 
 const CONTENT_DIR = path.join(__dirname, "content");
 
@@ -80,12 +81,19 @@ async function loadStandard(code) {
   }
 }
 
-async function upsertReviewer(fullName, email, role) {
-  const existing = await query("SELECT id FROM reviewers WHERE email = $1", [email]);
-  if (existing.rows[0]) return existing.rows[0].id;
+async function upsertReviewer(fullName, email, role, password) {
+  const existing = await query("SELECT id, password_hash FROM reviewers WHERE email = $1", [email]);
+  if (existing.rows[0]) {
+    // Реестр уже существует (например, после старой миграции без паролей) —
+    // проставляем пароль, только если его ещё нет, не трогаем остальное.
+    if (!existing.rows[0].password_hash) {
+      await query("UPDATE reviewers SET password_hash = $1 WHERE id = $2", [hashPassword(password), existing.rows[0].id]);
+    }
+    return existing.rows[0].id;
+  }
   const inserted = await query(
-    "INSERT INTO reviewers (full_name, email, role) VALUES ($1, $2, $3) RETURNING id",
-    [fullName, email, role]
+    "INSERT INTO reviewers (full_name, email, role, password_hash) VALUES ($1, $2, $3, $4) RETURNING id",
+    [fullName, email, role, hashPassword(password)]
   );
   return inserted.rows[0].id;
 }
@@ -94,8 +102,8 @@ async function seed() {
   for (const code of STANDARD_FILES) {
     await loadStandard(code);
   }
-  await upsertReviewer("А. Ревьюер", "reviewer@example.ru", "reviewer");
-  console.log("Seed complete.");
+  await upsertReviewer("А. Ревьюер", "reviewer@example.ru", "reviewer", "reviewer123");
+  console.log("Seed complete. Демо-ревьюер: reviewer@example.ru / reviewer123");
 }
 
 seed()

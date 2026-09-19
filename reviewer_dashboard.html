@@ -146,6 +146,23 @@
 
   .task-score-print{display:none;}
 
+  .login-shell{max-width:380px;margin:100px auto;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:32px 36px;box-shadow:0 1px 3px rgba(27,36,48,.04);}
+  .login-title{font-size:19px;font-weight:700;margin:0 0 6px;}
+  .login-sub{font-size:13px;color:var(--ink-soft);margin:0 0 22px;}
+  .login-field{margin-bottom:16px;}
+  .login-field label{display:block;font-size:12.5px;font-weight:500;margin-bottom:6px;}
+  .login-field input{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:10px 12px;
+    font-size:14px;font-family:inherit;box-sizing:border-box;}
+  .login-field input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .login-btn{width:100%;background:var(--primary);color:#fff;border:none;padding:11px;border-radius:var(--radius);
+    font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:6px;}
+  .login-btn:hover{background:#233242;}
+  .login-error{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);padding:10px 12px;
+    border-radius:var(--radius);font-size:12.5px;margin-bottom:14px;}
+  .logout-link{background:none;border:none;color:var(--primary);font-size:11px;font-family:inherit;cursor:pointer;
+    padding:0;text-decoration:underline;margin-top:2px;}
+
   .empty{display:flex;align-items:center;justify-content:center;height:500px;color:var(--ink-soft);font-size:13px;text-align:center;padding:0 40px;}
   .note{margin-top:28px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
   .hidden{display:none !important;}
@@ -167,7 +184,23 @@
 </style>
 </head>
 <body>
-<div class="shell">
+
+<div class="login-shell hidden" id="login-screen">
+  <h1 class="login-title">Вход для ревьюера</h1>
+  <p class="login-sub">Панель проверок компетенций — доступ только для зарегистрированных ревьюеров.</p>
+  <div class="login-error hidden" id="login-error"></div>
+  <div class="login-field">
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" placeholder="reviewer@example.ru" autocomplete="username" />
+  </div>
+  <div class="login-field">
+    <label for="login-password">Пароль</label>
+    <input type="password" id="login-password" autocomplete="current-password" />
+  </div>
+  <button type="button" class="login-btn" id="login-btn">Войти</button>
+</div>
+
+<div class="shell hidden" id="app-shell">
 
   <div class="doc-head">
     <div>
@@ -175,7 +208,9 @@
       <h1 class="doc-title">Проверки компетенций</h1>
       <p class="doc-sub">Список проверок, оценка практических заданий и сводные отчёты</p>
     </div>
-    <div class="who">Вы вошли как <b id="who-email"></b><br/>роль: ревьюер</div>
+    <div class="who">Вы вошли как <b id="who-email"></b><br/>роль: ревьюер
+      <div><button type="button" class="logout-link" id="logout-btn">Выйти</button></div>
+    </div>
   </div>
 
   <div class="banner error hidden" id="load-error"></div>
@@ -209,9 +244,6 @@
 
 <script>
   const API_BASE = "http://localhost:3001";
-  const REVIEWER_EMAIL = "reviewer@example.ru";
-  const AUTH_HEADERS = { "X-Reviewer-Email": REVIEWER_EMAIL };
-  document.getElementById("who-email").textContent = REVIEWER_EMAIL;
 
   const CONTEXT_LABEL = { employee: "Сотрудник", candidate: "Кандидат" };
   const STATUS_LABEL = { in_progress: "В процессе", completed: "Завершена" };
@@ -241,12 +273,18 @@
       standards.map(s => `<option value="${s.code}">${s.code} — ${s.title}</option>`).join("");
   }
 
+  function isSessionExpired(res){
+    if (res.status === 401) { showLogin(); return true; }
+    return false;
+  }
+
   async function fetchAssessments(){
     const params = new URLSearchParams();
     if (standardFilter.value) params.set("standardCode", standardFilter.value);
     if (contextFilter.value) params.set("context", contextFilter.value);
     if (statusFilter.value) params.set("status", statusFilter.value);
-    const res = await fetch(`${API_BASE}/api/assessments?${params.toString()}`, { headers: AUTH_HEADERS });
+    const res = await fetch(`${API_BASE}/api/assessments?${params.toString()}`);
+    if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || "Не удалось загрузить список проверок");
@@ -284,7 +322,8 @@
     renderList();
     panelEl.innerHTML = '<div class="empty">Загрузка отчёта…</div>';
     try {
-      const res = await fetch(`${API_BASE}/api/assessments/${id}/report`, { headers: AUTH_HEADERS });
+      const res = await fetch(`${API_BASE}/api/assessments/${id}/report`);
+      if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Не удалось загрузить отчёт");
       activeReport = data;
@@ -452,9 +491,10 @@
         try {
           const res = await fetch(`${API_BASE}/api/assessments/${activeId}/practical-submissions/${submissionId}/score`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", ...AUTH_HEADERS },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ score, notes }),
           });
+          if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "Не удалось сохранить оценку");
           hideError();
@@ -472,9 +512,10 @@
     try {
       const res = await fetch(`${API_BASE}/api/assessments/${id}/decision`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...AUTH_HEADERS },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision }),
       });
+      if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Не удалось сохранить решение");
       hideError();
@@ -500,9 +541,74 @@
   contextFilter.addEventListener("change", refreshList);
   statusFilter.addEventListener("change", refreshList);
 
-  loadStandardsFilter();
-  refreshList();
-  renderPanel();
+  // Вход ревьюера: сессия — httpOnly-кука, проверяется через /api/auth/me
+  // при загрузке страницы. См. backend/README.md и routes/auth.js.
+  const appShell = document.getElementById("app-shell");
+  const loginScreen = document.getElementById("login-screen");
+  const loginEmailInput = document.getElementById("login-email");
+  const loginPasswordInput = document.getElementById("login-password");
+  const loginErrorEl = document.getElementById("login-error");
+
+  function showLogin(){
+    appShell.classList.add("hidden");
+    loginScreen.classList.remove("hidden");
+    activeId = null;
+    activeReport = null;
+  }
+
+  async function showApp(reviewer){
+    document.getElementById("who-email").textContent = reviewer.email;
+    loginScreen.classList.add("hidden");
+    appShell.classList.remove("hidden");
+    renderPanel();
+    await loadStandardsFilter();
+    await refreshList();
+  }
+
+  document.getElementById("login-btn").addEventListener("click", async () => {
+    const email = loginEmailInput.value.trim();
+    const password = loginPasswordInput.value;
+    loginErrorEl.classList.add("hidden");
+    if (!email || !password) {
+      loginErrorEl.textContent = "Введите email и пароль.";
+      loginErrorEl.classList.remove("hidden");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось войти");
+      loginPasswordInput.value = "";
+      await showApp(data);
+    } catch (err) {
+      loginErrorEl.textContent = err.message;
+      loginErrorEl.classList.remove("hidden");
+    }
+  });
+
+  loginPasswordInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("login-btn").click();
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    try { await fetch(`${API_BASE}/api/auth/logout`, { method: "POST" }); } catch (e) { /* всё равно выходим локально */ }
+    showLogin();
+  });
+
+  (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`);
+      if (!res.ok) { showLogin(); return; }
+      const reviewer = await res.json();
+      await showApp(reviewer);
+    } catch (e) {
+      showLogin();
+    }
+  })();
 </script>
 </body>
 </html>
