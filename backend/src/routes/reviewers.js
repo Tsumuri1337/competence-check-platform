@@ -1,19 +1,11 @@
 const db = require("../db");
 const { logAccess } = require("../lib/accessLog");
-
-// PoC-заглушка аутентификации: ревьюер передаёт свой email в заголовке
-// X-Reviewer-Email. Настоящая аутентификация — вне объёма этого среза.
-async function resolveReviewer(req) {
-  const email = req.headers["x-reviewer-email"];
-  if (!email) return null;
-  const { rows } = await db.query("SELECT * FROM reviewers WHERE email = $1", [email]);
-  return rows[0] || null;
-}
+const { resolveReviewerFromSession } = require("./auth");
 
 async function requireReviewer(req, res) {
-  const reviewer = await resolveReviewer(req);
+  const reviewer = await resolveReviewerFromSession(req);
   if (!reviewer) {
-    res.status(403).json({ error: "Доступ только для ревьюеров (заголовок X-Reviewer-Email)" });
+    res.status(401).json({ error: "Требуется вход (сессия истекла или отсутствует)" });
     return null;
   }
   return reviewer;

@@ -78,6 +78,18 @@ CREATE TABLE IF NOT EXISTS reviewers (
   role TEXT NOT NULL DEFAULT 'reviewer'
 );
 
+-- Пароль хранится как scrypt-хэш ("соль:хэш" в hex, см. src/lib/auth.js) —
+-- заменяет прежнюю PoC-заглушку через заголовок X-Reviewer-Email.
+ALTER TABLE reviewers ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+CREATE TABLE IF NOT EXISTS reviewer_sessions (
+  id SERIAL PRIMARY KEY,
+  reviewer_id INTEGER NOT NULL REFERENCES reviewers(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,   -- sha256 токена из httpOnly-куки; сам токен на сервере не хранится
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
 -- Прохождение проверки: анкета -> квиз -> практическое задание -> самооценка.
 
 CREATE TABLE IF NOT EXISTS assessments (
