@@ -30,7 +30,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://hr_poc_app:hr_poc_app_dev@localhost:5432/hr_poc
       # Одноразовый ключ только для CI — не боевой.
-      PII_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000001
+      PII_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000001"
 
     steps:
       - uses: actions/checkout@v4
