@@ -68,6 +68,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Внутренняя ошибка сервера", detail: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`Competence-check backend listening on http://localhost:${PORT}`);
-});
+// require.main===module гард — при `node src/server.js` слушаем порт как
+// раньше; при require() из тестов (см. backend/test/) отдаём только app и
+// сами поднимаем сервер на случайном порту.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Competence-check backend listening on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
