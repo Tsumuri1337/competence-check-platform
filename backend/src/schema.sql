@@ -89,6 +89,16 @@ CREATE TABLE IF NOT EXISTS reviewers (
 -- заменяет прежнюю PoC-заглушку через заголовок X-Reviewer-Email.
 ALTER TABLE reviewers ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
+-- Неудачные попытки входа — для блокировки перебора пароля (см. routes/auth.js).
+-- key: 'email:<нормализованный email>' или 'ip:<адрес>'; храним в БД, а не в
+-- памяти процесса, чтобы лимит переживал перезапуск и работал на нескольких инстансах.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id SERIAL PRIMARY KEY,
+  key TEXT NOT NULL,
+  at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS login_attempts_key_at ON login_attempts(key, at);
+
 CREATE TABLE IF NOT EXISTS reviewer_sessions (
   id SERIAL PRIMARY KEY,
   reviewer_id INTEGER NOT NULL REFERENCES reviewers(id) ON DELETE CASCADE,
