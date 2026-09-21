@@ -14,7 +14,7 @@ const {
   submitSelfAssessment,
 } = require("./routes/assessments");
 const { listAssessments, getAssessmentReport, scorePracticalSubmission, setDecision } = require("./routes/reviewers");
-const { login, logout, me } = require("./routes/auth");
+const { login, logout, me, changePassword } = require("./routes/auth");
 const { parseCookies } = require("./lib/cookies");
 
 const PORT = process.env.PORT || 3001;
@@ -38,6 +38,7 @@ app.get("/reviewer_dashboard.html", (req, res) => res.sendFile(path.join(PROJECT
 app.post("/api/auth/login", login);
 app.post("/api/auth/logout", logout);
 app.get("/api/auth/me", me);
+app.post("/api/auth/change-password", changePassword);
 
 app.get("/api/standards", listStandards);
 app.get("/api/standards/:code", getStandardByCode);

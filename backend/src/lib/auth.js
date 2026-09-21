@@ -19,6 +19,19 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(candidate, expected);
 }
 
+const MIN_PASSWORD_LENGTH = 10;
+const MAX_PASSWORD_LENGTH = 200; // потолок, чтобы огромный "пароль" не жёг CPU в scrypt
+
+// Возвращает текст ошибки или null, если пароль подходит.
+function validatePasswordStrength(password) {
+  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
+    return `Пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов`;
+  }
+  if (password.length > MAX_PASSWORD_LENGTH) return `Пароль должен быть не длиннее ${MAX_PASSWORD_LENGTH} символов`;
+  if (new Set(password).size < 4) return "Пароль слишком простой";
+  return null;
+}
+
 // Сессионный токен: случайные 32 байта в куке ревьюера, на сервере хранится
 // только его sha256-хэш (как при хранении паролей — компрометация БД не
 // раскрывает действующие токены).
@@ -30,4 +43,4 @@ function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-module.exports = { hashPassword, verifyPassword, generateSessionToken, hashToken };
+module.exports = { hashPassword, verifyPassword, generateSessionToken, hashToken, validatePasswordStrength, MAX_PASSWORD_LENGTH };

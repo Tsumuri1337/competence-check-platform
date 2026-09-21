@@ -160,6 +160,12 @@
   .login-btn:hover{background:#233242;}
   .login-error{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);padding:10px 12px;
     border-radius:var(--radius);font-size:12.5px;margin-bottom:14px;}
+  .pw-form{margin-top:10px;text-align:left;width:240px;margin-left:auto;}
+  .pw-form input{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:8px 10px;
+    font-size:12.5px;font-family:inherit;margin-bottom:8px;box-sizing:border-box;}
+  .pw-form .login-btn{padding:8px;font-size:12.5px;margin-top:0;}
+  .pw-msg{font-size:12px;margin-bottom:8px;color:var(--danger);}
+  .pw-msg.ok{color:var(--success);}
   .logout-link{background:none;border:none;color:var(--primary);font-size:11px;font-family:inherit;cursor:pointer;
     padding:0;text-decoration:underline;margin-top:2px;}
 
@@ -209,7 +215,13 @@
       <p class="doc-sub">Список проверок, оценка практических заданий и сводные отчёты</p>
     </div>
     <div class="who">Вы вошли как <b id="who-email"></b><br/>роль: ревьюер
-      <div><button type="button" class="logout-link" id="logout-btn">Выйти</button></div>
+      <div><button type="button" class="logout-link" id="password-btn">Сменить пароль</button> · <button type="button" class="logout-link" id="logout-btn">Выйти</button></div>
+      <div class="pw-form hidden" id="pw-form">
+        <input type="password" id="pw-current" placeholder="Текущий пароль" autocomplete="current-password" />
+        <input type="password" id="pw-new" placeholder="Новый пароль (от 10 символов)" autocomplete="new-password" />
+        <div class="pw-msg hidden" id="pw-msg"></div>
+        <button type="button" class="login-btn" id="pw-save">Сохранить</button>
+      </div>
     </div>
   </div>
 
@@ -592,6 +604,32 @@
 
   loginPasswordInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") document.getElementById("login-btn").click();
+  });
+
+  document.getElementById("password-btn").addEventListener("click", () => {
+    document.getElementById("pw-form").classList.toggle("hidden");
+  });
+
+  document.getElementById("pw-save").addEventListener("click", async () => {
+    const msg = document.getElementById("pw-msg");
+    const currentPassword = document.getElementById("pw-current").value;
+    const newPassword = document.getElementById("pw-new").value;
+    msg.classList.remove("hidden", "ok");
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сменить пароль");
+      msg.textContent = "Пароль изменён. Остальные сессии завершены.";
+      msg.classList.add("ok");
+      document.getElementById("pw-current").value = "";
+      document.getElementById("pw-new").value = "";
+    } catch (err) {
+      msg.textContent = err.message;
+    }
   });
 
   document.getElementById("logout-btn").addEventListener("click", async () => {
