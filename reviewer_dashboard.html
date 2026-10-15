@@ -127,7 +127,7 @@
   .rating-kind{font-size:9.5px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);text-transform:uppercase;margin-right:8px;}
   .rating-value{font-weight:700;color:var(--primary);flex-shrink:0;}
 
-  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
   @media (max-width:700px){.summary-grid{grid-template-columns:1fr;}}
   .summary-item{background:var(--primary-soft);border-radius:var(--radius);padding:14px 16px;text-align:center;}
   .summary-label{display:block;font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
@@ -145,6 +145,23 @@
   .btn-outline:hover{border-color:var(--primary);background:var(--primary-soft);}
 
   .task-score-print{display:none;}
+
+  /* Сертификаты участника: проверка вручную по «имя + номер» на странице издателя. */
+  .cert-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px;}
+  .cert-title{font-size:13.5px;font-weight:600;}
+  .cert-issuer{font-size:12px;color:var(--ink-soft);}
+  .cert-fields{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:12.5px;margin-bottom:10px;}
+  .cert-fields dt{color:var(--ink-soft);}
+  .cert-fields dd{margin:0;font-family:"IBM Plex Mono",monospace;word-break:break-all;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .chip{font-size:11px;padding:3px 8px;border-radius:10px;background:var(--primary-soft);color:var(--ink-soft);}
+  .chip.relevant{background:var(--success-soft);color:var(--success);font-weight:600;}
+  .cert-warn{font-size:12px;color:var(--danger);background:var(--danger-soft);padding:6px 10px;border-radius:4px;margin-bottom:8px;}
+  .cert-verify{font-size:12px;background:var(--primary-soft);padding:8px 10px;border-radius:4px;margin-bottom:10px;}
+  .cert-verify a{color:var(--primary);font-weight:600;}
+  .badge.cert-pending{background:var(--warn-soft);color:var(--warn);}
+  .badge.cert-verified{background:var(--success-soft);color:var(--success);}
+  .badge.cert-rejected{background:var(--danger-soft);color:var(--danger);}
 
   .login-shell{max-width:380px;margin:100px auto;background:var(--surface);border:1px solid var(--line);
     border-radius:var(--radius);padding:32px 36px;box-shadow:0 1px 3px rgba(27,36,48,.04);}
@@ -184,7 +201,7 @@
     .panel{border:none;box-shadow:none;padding:0;min-height:0;}
     .task-rubric, .task-submission, .score-row, .lf-group{display:none !important;}
     .task-score-print{display:block;font-size:13px;font-weight:600;margin-top:4px;color:var(--primary);}
-    .btn-outline, .dbtn{display:none !important;}
+    .btn-outline, .dbtn, .cert-verify, .cert-actions{display:none !important;}
     .list-row.active{border-left:none;padding-left:18px;}
   }
 </style>
@@ -276,6 +293,13 @@
   function showError(msg){ loadError.textContent = msg; loadError.classList.remove("hidden"); }
   function hideError(){ loadError.classList.add("hidden"); }
   function formatDate(iso){ return new Date(iso).toLocaleString("ru-RU"); }
+  // Всё, что вводит участник (ФИО, ответы, сертификаты), вставляется в
+  // innerHTML только через esc() — иначе участник мог бы внедрить скрипт в
+  // панель ревьюера.
+  function esc(value){
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  }
+  const CERT_STATUS_LABEL = { pending: "на проверке", verified: "подтверждён", rejected: "не подтверждён" };
 
   async function loadStandardsFilter(){
     const res = await fetch(`${API_BASE}/api/standards`);
@@ -314,7 +338,7 @@
     listEl.innerHTML = assessments.map(a => `
       <div class="list-row ${a.id===activeId?'active':''}" data-id="${a.id}">
         <div class="lr-main">
-          <div class="lr-name">${a.full_name}</div>
+          <div class="lr-name">${esc(a.full_name)}</div>
           <div class="lr-vac">${a.standard_code} — ${a.standard_title}</div>
           <div class="lr-date">начато ${formatDate(a.created_at)}</div>
         </div>
@@ -356,7 +380,7 @@
       document.title = DEFAULT_TITLE;
       return;
     }
-    const { assessment, quiz, practicalSubmissions, selfAssessment, summary } = activeReport;
+    const { assessment, quiz, practicalSubmissions, selfAssessment, certificates, summary } = activeReport;
     document.title = `${assessment.full_name} — комплексный отчёт`;
 
     const lfGroups = new Map();
@@ -385,6 +409,10 @@
             <span class="summary-label">Самооценка</span>
             <span class="summary-value">${summary.selfAssessmentTaken ? summary.selfAssessmentAverage + "/5" : "не пройдена"}</span>
           </div>
+          <div class="summary-item">
+            <span class="summary-label">Сертификаты</span>
+            <span class="summary-value">${summary.certificatesTotal ? `${summary.certificatesVerified} из ${summary.certificatesTotal}` : "—"}</span>
+          </div>
         </div>
         ${isCandidate ? `
         <div class="decision-label">Решение по кандидату</div>
@@ -402,9 +430,9 @@
     panelEl.innerHTML = `
       <div class="panel-head">
         <div>
-          <h2 class="panel-name">${assessment.full_name}</h2>
-          <p class="panel-vac">${assessment.standard_code} — ${assessment.standard_title}</p>
-          <div class="panel-meta">проверка №${assessment.id} · ${assessment.email} · начато ${formatDate(assessment.created_at)}</div>
+          <h2 class="panel-name">${esc(assessment.full_name)}</h2>
+          <p class="panel-vac">${esc(assessment.standard_code)} — ${esc(assessment.standard_title)}</p>
+          <div class="panel-meta">проверка №${assessment.id} · ${esc(assessment.email)}${assessment.name_latin ? ` · латиницей: ${esc(assessment.name_latin)}` : ""} · начато ${formatDate(assessment.created_at)}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <span class="badge ${assessment.context}">${CONTEXT_LABEL[assessment.context]}</span>
@@ -428,10 +456,10 @@
             <div class="task-card" data-submission-id="${ps.id}">
               <div class="task-prompt">${ps.prompt}</div>
               <div class="task-rubric"><b>Рубрика:</b> ${ps.rubric}</div>
-              <div class="task-submission">${ps.submission_text}</div>
+              <div class="task-submission">${esc(ps.submission_text)}</div>
               <div class="score-row">
                 <input type="number" min="0" max="100" placeholder="0-100" value="${ps.reviewer_score ?? ''}" class="score-input" />
-                <textarea placeholder="Комментарий ревьюера…" class="notes-input">${ps.reviewer_notes ?? ''}</textarea>
+                <textarea placeholder="Комментарий ревьюера…" class="notes-input">${esc(ps.reviewer_notes)}</textarea>
                 <button type="button" class="save-score-btn">Сохранить</button>
               </div>
               ${ps.reviewer_score !== null ? '<div class="score-saved">Оценка сохранена.</div>' : ''}
@@ -473,8 +501,63 @@
         `}
       </div>
 
+      <div class="section-block">
+        <div class="section-title">Сертификаты</div>
+        ${certificates.length === 0 ? '<div style="font-size:13px;color:var(--ink-soft);">Участник не указал сертификатов.</div>' :
+          certificates.map(c => `
+            <div class="task-card" data-cert-id="${c.id}">
+              <div class="cert-head">
+                <div>
+                  <div class="cert-title">${esc(c.certification)}</div>
+                  <div class="cert-issuer">${esc(c.issuerName)}</div>
+                </div>
+                <span class="badge cert-${c.verificationStatus}">${CERT_STATUS_LABEL[c.verificationStatus]}</span>
+              </div>
+              <dl class="cert-fields">
+                <dt>Имя в сертификате</dt><dd>${esc(c.holderName)}</dd>
+                <dt>${esc(c.verify ? c.verify.credentialLabel : "Номер")}</dt><dd>${esc(c.credentialId)}</dd>
+                ${c.issuedOn ? `<dt>Выдан</dt><dd>${esc(c.issuedOn)}</dd>` : ""}
+                ${c.expiresOn ? `<dt>Действует до</dt><dd>${esc(c.expiresOn)}${c.expired ? " — истёк" : ""}</dd>` : ""}
+                ${c.badgeUrl ? `<dt>Бейдж</dt><dd><a href="${esc(c.badgeUrl)}" target="_blank" rel="noopener noreferrer">${esc(c.badgeUrl)}</a></dd>` : ""}
+              </dl>
+              ${c.expired ? '<div class="cert-warn">Срок действия сертификата истёк.</div>' : ""}
+              ${c.sameNumberElsewhere ? `<div class="cert-warn">Этот же номер указан ещё у ${c.sameNumberElsewhere} участник(ов) — проверьте особенно внимательно.</div>` : ""}
+              ${c.matchesStandard ? '<div class="chips"><span class="chip relevant">Квалификация по профстандарту этой проверки</span></div>' : ""}
+              ${c.competences.length ? `<div class="chips">${c.competences.map(k => `<span class="chip ${k.relevantToStandard ? "relevant" : ""}" title="${k.relevantToStandard ? "область есть в профстандарте этой проверки" : ""}">${esc(k.title)}</span>`).join("")}</div>` : ""}
+              ${c.verify ? `<div class="cert-verify">
+                ${c.verify.url ? `<a href="${esc(c.verify.url)}" target="_blank" rel="noopener noreferrer">Открыть страницу проверки издателя ↗</a>${c.verify.urlConfirmed ? "" : " (адрес не подтверждён — если не открывается, найдите проверку на сайте издателя)"}<br>` : ""}
+                ${esc(c.verify.how)}
+              </div>` : ""}
+              <div class="score-row cert-actions">
+                <textarea placeholder="Комментарий (виден участнику)…" class="cert-note">${esc(c.verificationNote)}</textarea>
+                <button type="button" class="cert-btn" data-status="verified">Подтверждён</button>
+                <button type="button" class="cert-btn" data-status="rejected">Не подтверждён</button>
+                ${c.verificationStatus !== "pending" ? '<button type="button" class="cert-btn" data-status="pending">Сбросить</button>' : ""}
+              </div>
+            </div>`).join("")}
+      </div>
+
       ${decisionSection}
     `;
+
+    panelEl.querySelectorAll("[data-cert-id]").forEach(card => {
+      card.querySelectorAll(".cert-btn").forEach(btn => btn.addEventListener("click", async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/assessments/${activeId}/certificates/${card.dataset.certId}/verification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: btn.dataset.status, note: card.querySelector(".cert-note").value }),
+          });
+          if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Не удалось сохранить результат проверки");
+          hideError();
+          await selectAssessment(activeId);
+        } catch (err) {
+          showError(err.message);
+        }
+      }));
+    });
 
     panelEl.querySelectorAll(".dbtn").forEach(btn => {
       btn.addEventListener("click", () => submitDecision(assessment.id, btn.dataset.d));
@@ -495,7 +578,7 @@
     const pdfBtn = document.getElementById("download-pdf-btn");
     if (pdfBtn) pdfBtn.addEventListener("click", () => window.print());
 
-    panelEl.querySelectorAll(".task-card").forEach(card => {
+    panelEl.querySelectorAll(".task-card[data-submission-id]").forEach(card => {
       card.querySelector(".save-score-btn").addEventListener("click", async () => {
         const submissionId = card.dataset.submissionId;
         const score = Number(card.querySelector(".score-input").value);

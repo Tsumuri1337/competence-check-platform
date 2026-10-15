@@ -2,6 +2,7 @@ const db = require("../db");
 const { logAccess } = require("../lib/accessLog");
 const { resolveReviewerFromSession } = require("./auth");
 const { decrypt } = require("../lib/pii");
+const { certificatesForReport } = require("./certificates");
 
 function decryptPerson(row) {
   return { ...row, full_name: decrypt(row.full_name), email: decrypt(row.email) };
@@ -56,7 +57,7 @@ async function getAssessmentReport(req, res) {
 
   const assessmentId = Number(req.params.id);
   const assessmentResult = await db.query(
-    `SELECT a.id, a.status, a.context, a.decision, a.created_at, p.full_name, p.email, s.id as standard_id, s.code as standard_code, s.title as standard_title
+    `SELECT a.id, a.person_id, a.status, a.context, a.decision, a.created_at, p.full_name, p.email, p.name_latin, s.id as standard_id, s.code as standard_code, s.title as standard_title
      FROM assessments a
      JOIN people p ON p.id = a.person_id
      JOIN standards s ON s.id = a.standard_id
@@ -68,9 +69,11 @@ async function getAssessmentReport(req, res) {
     res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
-  const assessment = decryptPerson(assessmentRow);
+  const { person_id: personId, ...assessmentFields } = assessmentRow;
+  const assessment = decryptPerson(assessmentFields);
+  assessment.name_latin = assessment.name_latin ? decrypt(assessment.name_latin) : null;
 
-  const [quiz, submissions, ratings] = await Promise.all([
+  const [quiz, submissions, ratings, certificates] = await Promise.all([
     db.query(
       `SELECT qr.question_id, qr.selected_index, qr.is_correct, qq.text
        FROM quiz_responses qr JOIN quiz_questions qq ON qq.id = qr.question_id
@@ -91,6 +94,7 @@ async function getAssessmentReport(req, res) {
        WHERE sar.assessment_id = $1 ORDER BY lf.code, ci.id`,
       [assessmentId]
     ),
+    certificatesForReport(personId, assessment.standard_code),
   ]);
 
   await logAccess(reviewer.id, assessmentId, "view_report");
@@ -108,6 +112,8 @@ async function getAssessmentReport(req, res) {
     practicalAverage,
     allPracticalReviewed: submissions.rows.length > 0 && scoredSubmissions.length === submissions.rows.length,
     selfAssessmentTaken: ratings.rows.length > 0,
+    certificatesVerified: certificates.filter((c) => c.verificationStatus === "verified").length,
+    certificatesTotal: certificates.length,
     selfAssessmentAverage: ratings.rows.length
       ? Math.round((ratings.rows.reduce((sum, r) => sum + r.rating, 0) / ratings.rows.length) * 10) / 10
       : null,
@@ -118,6 +124,7 @@ async function getAssessmentReport(req, res) {
     quiz: { responses: quiz.rows, score: { correct: quizCorrect, total: quiz.rows.length } },
     practicalSubmissions: submissions.rows,
     selfAssessment: ratings.rows,
+    certificates,
     summary,
   });
 }

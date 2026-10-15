@@ -17,6 +17,7 @@ const {
 const { listAssessments, getAssessmentReport, scorePracticalSubmission, setDecision } = require("./routes/reviewers");
 const { login, logout, me, changePassword } = require("./routes/auth");
 const participantAuth = require("./routes/participantAuth");
+const certificates = require("./routes/certificates");
 const { parseCookies } = require("./lib/cookies");
 
 const PORT = process.env.PORT || 3001;
@@ -48,6 +49,11 @@ app.post("/api/participant/logout", participantAuth.logout);
 app.get("/api/participant/me", participantAuth.me);
 app.post("/api/participant/change-password", participantAuth.changePassword);
 app.get("/api/participant/assessments", participantAuth.listOwnAssessments);
+app.patch("/api/participant/profile", certificates.updateProfile);
+app.get("/api/participant/certificates", certificates.listOwnCertificates);
+app.post("/api/participant/certificates", certificates.addCertificate);
+app.delete("/api/participant/certificates/:id", certificates.deleteCertificate);
+app.get("/api/certificate-issuers", certificates.listIssuers);
 
 app.get("/api/standards", listStandards);
 app.get("/api/standards/:code", getStandardByCode);
@@ -67,6 +73,7 @@ app.post("/api/assessments/:id/self-assessment", submitSelfAssessment);
 app.get("/api/assessments/:id/report", getAssessmentReport);
 app.post("/api/assessments/:assessmentId/practical-submissions/:submissionId/score", scorePracticalSubmission);
 app.post("/api/assessments/:id/decision", setDecision);
+app.post("/api/assessments/:assessmentId/certificates/:certificateId/verification", certificates.verifyCertificate);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Маршрут не найден" });

@@ -111,6 +111,11 @@ CREATE TABLE IF NOT EXISTS participant_sessions (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
+-- Имя латиницей, как оно напечатано в международных сертификатах (Cisco,
+-- ISC2, ...) — подставляется в форму сертификата и показывается ревьюеру
+-- для проверки по связке «имя + номер». Зашифровано, как full_name.
+ALTER TABLE people ADD COLUMN IF NOT EXISTS name_latin TEXT;
+
 CREATE TABLE IF NOT EXISTS reviewers (
   id SERIAL PRIMARY KEY,
   full_name TEXT NOT NULL,
@@ -121,6 +126,33 @@ CREATE TABLE IF NOT EXISTS reviewers (
 -- Пароль хранится как scrypt-хэш ("соль:хэш" в hex, см. src/lib/auth.js) —
 -- заменяет прежнюю PoC-заглушку через заголовок X-Reviewer-Email.
 ALTER TABLE reviewers ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+-- Сертификаты, заявленные участником (каталог издателей —
+-- src/content/certificate-issuers.json). Проверяет ревьюер вручную на
+-- странице издателя: verification_status pending -> verified | rejected.
+-- holder_name, credential_id, badge_url зашифрованы (src/lib/pii.js);
+-- credential_hash — blind index «издатель:номер», чтобы не дублировать
+-- сертификат у одного участника и показать ревьюеру, если тот же номер
+-- заявлен кем-то ещё.
+CREATE TABLE IF NOT EXISTS participant_certificates (
+  id SERIAL PRIMARY KEY,
+  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  issuer TEXT NOT NULL,
+  certification TEXT NOT NULL,
+  holder_name TEXT NOT NULL,
+  credential_id TEXT NOT NULL,
+  credential_hash TEXT NOT NULL,
+  issued_on DATE,
+  expires_on DATE,
+  badge_url TEXT,
+  verification_status TEXT NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'rejected')),
+  verified_by INTEGER REFERENCES reviewers(id),
+  verified_at TIMESTAMPTZ,
+  verification_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (person_id, credential_hash)
+);
+CREATE INDEX IF NOT EXISTS participant_certificates_hash ON participant_certificates(credential_hash);
 
 -- Неудачные попытки входа — для блокировки перебора пароля (см. routes/auth.js).
 -- key: 'email:<нормализованный email>' или 'ip:<адрес>'; храним в БД, а не в

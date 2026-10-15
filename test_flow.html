@@ -183,7 +183,19 @@
   .hidden{display:none !important;}
 
   /* Вход/регистрация участника: пока нет сессии, шаги проверки скрыты. */
-  body.logged-out #steps, body.logged-out .card[id^="step-"], body.logged-out #restart-link{display:none !important;}
+  body.logged-out #steps, body.logged-out .card[id^="step-"], body.logged-out #restart-link, body.logged-out #certs-card{display:none !important;}
+  input[type=date], input[type=url]{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:10px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);}
+  .field-hint{font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.5;}
+  .inline-row{display:flex;gap:10px;align-items:center;}
+  .inline-row input{flex:1;}
+  .cert-list{list-style:none;margin:0 0 20px;padding:0;border-top:1px solid var(--line);}
+  .cert-list li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .cert-list .my-meta{word-break:break-all;}
+  .cert-status{font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;}
+  .cert-status.pending{background:var(--accent-soft);color:#5c3f11;}
+  .cert-status.verified{background:var(--success-soft);color:var(--success);}
+  .cert-status.rejected{background:var(--danger-soft);color:var(--danger);}
+  .cert-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
   .account-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
     font-size:13px;color:var(--ink-soft);margin-bottom:20px;}
   .account-bar b{color:var(--ink);font-weight:600;}
@@ -257,6 +269,11 @@
         <label class="field-label" for="f-fullname">ФИО<span class="req">*</span></label>
         <input type="text" id="f-fullname" placeholder="Иванова Мария Сергеевна" autocomplete="name" />
       </div>
+      <div class="field">
+        <label class="field-label" for="f-namelatin">Имя и фамилия латиницей</label>
+        <input type="text" id="f-namelatin" placeholder="Maria Ivanova" autocomplete="off" />
+        <div class="field-hint">Необязательно. Точно как в ваших международных сертификатах (Cisco, ISC2, Huawei…) — по имени и номеру ревьюер проверяет сертификат.</div>
+      </div>
       <div class="field" id="org-field">
         <label class="field-label" for="f-org">Организация</label>
         <input type="text" id="f-org" placeholder="ООО «Компания»" autocomplete="organization" />
@@ -315,6 +332,68 @@
     <div id="my-assessments-section" class="hidden" style="margin-top:32px">
       <h3 class="field-label">Мои проверки</h3>
       <ul class="my-list" id="my-assessments"></ul>
+    </div>
+  </div>
+
+  <!-- Сертификаты участника: проверяются ревьюером по «имя + номер» -->
+  <div class="card hidden" id="certs-card">
+    <div class="card-head">
+      <h2 class="card-title">Мои сертификаты</h2>
+      <p class="card-sub">Необязательно. Укажите имя и номер точно как в сертификате — ревьюер проверит их на сайте издателя (по одному имени издатели не ищут).</p>
+    </div>
+    <div class="field">
+      <label class="field-label" for="p-namelatin">Имя и фамилия латиницей, как в международных сертификатах</label>
+      <div class="inline-row">
+        <input type="text" id="p-namelatin" placeholder="Maria Ivanova" />
+        <button type="button" class="btn btn-secondary" id="p-namelatin-save">Сохранить</button>
+      </div>
+    </div>
+    <ul class="cert-list" id="cert-list"></ul>
+    <div class="btn-row left"><button type="button" class="btn btn-secondary" id="cert-add-toggle">+ Добавить сертификат</button></div>
+    <div id="cert-form" class="hidden" style="margin-top:24px">
+      <div class="row2">
+        <div class="field">
+          <label class="field-label" for="c-issuer">Кто выдал<span class="req">*</span></label>
+          <select id="c-issuer"></select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="c-cert">Сертификат<span class="req">*</span></label>
+          <select id="c-cert"></select>
+        </div>
+      </div>
+      <div class="field hidden" id="c-custom-field">
+        <label class="field-label" for="c-custom">Название сертификата<span class="req">*</span></label>
+        <input type="text" id="c-custom" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="field-label" for="c-holder" id="c-holder-label">Имя как в сертификате<span class="req">*</span></label>
+          <input type="text" id="c-holder" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="c-number" id="c-number-label">Номер<span class="req">*</span></label>
+          <input type="text" id="c-number" />
+        </div>
+      </div>
+      <div class="field-hint" id="c-number-hint" style="margin:-8px 0 20px"></div>
+      <div class="row2">
+        <div class="field">
+          <label class="field-label" for="c-issued">Дата выдачи</label>
+          <input type="date" id="c-issued" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="c-expires">Действует до</label>
+          <input type="date" id="c-expires" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="c-badge">Ссылка на цифровой бейдж (Credly и т.п.)</label>
+        <input type="url" id="c-badge" placeholder="https://www.credly.com/badges/…" />
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" id="cert-cancel">Отмена</button>
+        <button type="button" class="btn" id="cert-save">Добавить</button>
+      </div>
     </div>
   </div>
 
@@ -452,6 +531,7 @@
       if (i === n) stepEl.classList.add("active");
     }
     document.getElementById("restart-link").classList.toggle("hidden", n === 0);
+    document.getElementById("certs-card").classList.toggle("hidden", n !== 0);
     saveProgress(n);
   }
 
@@ -466,6 +546,7 @@
     hideError();
     goToStep(0);
     loadMyAssessments();
+    loadCertificates();
   }
 
   document.getElementById("restart-btn").addEventListener("click", () => {
@@ -969,7 +1050,9 @@
     document.getElementById("f-password").value = "";
     hideError();
     goToStep(0);
+    document.getElementById("p-namelatin").value = p.nameLatin || "";
     await loadMyAssessments();
+    await loadCertificates();
     await checkForSavedProgress();
   }
 
@@ -1004,6 +1087,7 @@
           email,
           password,
           context: registerContext,
+          nameLatin: document.getElementById("f-namelatin").value.trim() || undefined,
           organizationName: registerContext === "employee" ? document.getElementById("f-org").value.trim() || undefined : undefined,
         }
       : { email, password };
@@ -1107,6 +1191,157 @@
       }
     } catch (e) { /* список необязателен — не мешаем начать новую проверку */ }
   }
+
+  // ---- Сертификаты ----
+  let certIssuers = [];
+  const CERT_STATUS = { pending: "на проверке", verified: "подтверждён", rejected: "не подтверждён" };
+  const OTHER_CERT = "__other__";
+  const issuerSelect = document.getElementById("c-issuer");
+  const certSelect = document.getElementById("c-cert");
+
+  async function loadIssuers(){
+    if (certIssuers.length) return;
+    const res = await fetch(`${API_BASE}/api/certificate-issuers`);
+    if (!res.ok) throw new Error("Не удалось загрузить список издателей сертификатов");
+    certIssuers = await res.json();
+    const group = (region, label) => {
+      const og = document.createElement("optgroup");
+      og.label = label;
+      certIssuers.filter(i => i.region === region).forEach(i => og.append(new Option(i.name, i.slug)));
+      return og;
+    };
+    issuerSelect.replaceChildren(group("intl", "Международные"), group("ru", "Российские"));
+    onIssuerChange();
+  }
+
+  function currentIssuer(){ return certIssuers.find(i => i.slug === issuerSelect.value); }
+
+  function onIssuerChange(){
+    const issuer = currentIssuer();
+    if (!issuer) return;
+    certSelect.replaceChildren(...issuer.certifications.map(c => new Option(c.name, c.name)), new Option("Другое…", OTHER_CERT));
+    onCertChange();
+    const latin = issuer.nameScript === "latin";
+    document.getElementById("c-holder-label").firstChild.textContent = latin ? "Имя латиницей, как в сертификате" : "ФИО, как в документе";
+    const holder = document.getElementById("c-holder");
+    holder.value = latin ? (participant.nameLatin || "") : participant.fullName;
+    holder.placeholder = latin ? "Maria Ivanova" : "Иванова Мария Сергеевна";
+    document.getElementById("c-number-label").firstChild.textContent = issuer.credentialLabel;
+    document.getElementById("c-number-hint").textContent = issuer.credentialHint;
+  }
+
+  function onCertChange(){
+    document.getElementById("c-custom-field").classList.toggle("hidden", certSelect.value !== OTHER_CERT);
+  }
+
+  issuerSelect.addEventListener("change", onIssuerChange);
+  certSelect.addEventListener("change", onCertChange);
+
+  function renderCertificates(list){
+    const ul = document.getElementById("cert-list");
+    ul.replaceChildren();
+    for (const c of list) {
+      const li = document.createElement("li");
+      const info = document.createElement("div");
+      const title = document.createElement("div");
+      title.textContent = `${c.certification} · ${c.issuerName}`;
+      const meta = document.createElement("div");
+      meta.className = "my-meta";
+      meta.textContent = [c.holderName, c.credentialId, c.expiresOn ? `до ${c.expiresOn}${c.expired ? " (истёк)" : ""}` : null].filter(Boolean).join(" · ");
+      info.append(title, meta);
+      if (c.verificationNote) {
+        const note = document.createElement("div");
+        note.className = "my-meta";
+        note.textContent = `Комментарий ревьюера: ${c.verificationNote}`;
+        info.append(note);
+      }
+      const side = document.createElement("div");
+      side.className = "cert-side";
+      const status = document.createElement("span");
+      status.className = `cert-status ${c.verificationStatus}`;
+      status.textContent = CERT_STATUS[c.verificationStatus];
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "link-btn";
+      del.textContent = "Удалить";
+      del.addEventListener("click", async () => {
+        if (!confirm(`Удалить сертификат «${c.certification}»?`)) return;
+        const res = await fetch(`${API_BASE}/api/participant/certificates/${c.id}`, { method: "DELETE" });
+        if (res.ok) loadCertificates(); else showError("Не удалось удалить сертификат");
+      });
+      side.append(status, del);
+      li.append(info, side);
+      ul.append(li);
+    }
+  }
+
+  async function loadCertificates(){
+    try {
+      const res = await fetch(`${API_BASE}/api/participant/certificates`);
+      if (res.ok) renderCertificates(await res.json());
+    } catch (e) { /* раздел необязателен */ }
+  }
+
+  document.getElementById("p-namelatin-save").addEventListener("click", async () => {
+    hideError();
+    try {
+      const res = await fetch(`${API_BASE}/api/participant/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nameLatin: document.getElementById("p-namelatin").value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сохранить");
+      participant.nameLatin = data.nameLatin;
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  document.getElementById("cert-add-toggle").addEventListener("click", async () => {
+    hideError();
+    try {
+      await loadIssuers();
+      onIssuerChange();
+      document.getElementById("cert-form").classList.remove("hidden");
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+  document.getElementById("cert-cancel").addEventListener("click", () => {
+    document.getElementById("cert-form").classList.add("hidden");
+  });
+  document.getElementById("cert-save").addEventListener("click", async () => {
+    hideError();
+    const certification = certSelect.value === OTHER_CERT ? document.getElementById("c-custom").value.trim() : certSelect.value;
+    const body = {
+      issuer: issuerSelect.value,
+      certification,
+      holderName: document.getElementById("c-holder").value.trim(),
+      credentialId: document.getElementById("c-number").value.trim(),
+      issuedOn: document.getElementById("c-issued").value || undefined,
+      expiresOn: document.getElementById("c-expires").value || undefined,
+      badgeUrl: document.getElementById("c-badge").value.trim() || undefined,
+    };
+    if (!body.certification || !body.holderName || !body.credentialId) {
+      showError("Укажите сертификат, имя и номер.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/participant/certificates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось добавить сертификат");
+      ["c-custom", "c-number", "c-issued", "c-expires", "c-badge"].forEach(id => { document.getElementById(id).value = ""; });
+      document.getElementById("cert-form").classList.add("hidden");
+      await loadCertificates();
+    } catch (err) {
+      showError(err.message);
+    }
+  });
 
   async function checkSession(){
     const res = await fetch(`${API_BASE}/api/participant/me`);

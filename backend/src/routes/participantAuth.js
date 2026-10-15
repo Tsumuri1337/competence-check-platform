@@ -11,6 +11,8 @@ const { encrypt, decrypt, emailBlindIndex } = require("../lib/pii");
 // email — через email_hash.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Имя латиницей, как в международных сертификатах (см. routes/certificates.js).
+const LATIN_NAME_RE = /^[A-Za-z][A-Za-z .'-]*$/;
 const MAX_FIELD_LENGTH = 200;
 
 // См. routes/auth.js: scrypt считается и для неизвестного email, чтобы по
@@ -29,6 +31,7 @@ async function participantView(person) {
     email: decrypt(person.email),
     context: person.context,
     organizationName,
+    nameLatin: person.name_latin ? decrypt(person.name_latin) : null,
   };
 }
 
@@ -61,9 +64,9 @@ function isShortString(v) {
 }
 
 // POST /api/participant/register
-// body: { fullName, email, password, context: 'employee'|'candidate', organizationName? }
+// body: { fullName, email, password, context: 'employee'|'candidate', organizationName?, nameLatin? }
 async function register(req, res) {
-  const { fullName, email, password, context, organizationName } = req.body || {};
+  const { fullName, email, password, context, organizationName, nameLatin } = req.body || {};
   if (!isShortString(fullName) || !isShortString(email) || typeof password !== "string") {
     res.status(400).json({ error: "fullName, email и password обязательны" });
     return;
@@ -78,6 +81,10 @@ async function register(req, res) {
   }
   if (organizationName !== undefined && organizationName !== null && organizationName !== "" && !isShortString(organizationName)) {
     res.status(400).json({ error: "Некорректное название организации" });
+    return;
+  }
+  if (nameLatin && (typeof nameLatin !== "string" || nameLatin.length > MAX_FIELD_LENGTH || !LATIN_NAME_RE.test(nameLatin.trim()))) {
+    res.status(400).json({ error: "Имя латиницей: только латинские буквы, пробел, дефис, апостроф, точка" });
     return;
   }
   const weakness = validatePasswordStrength(password);
@@ -100,9 +107,17 @@ async function register(req, res) {
         : (await client.query("INSERT INTO organizations (name) VALUES ($1) RETURNING id", [orgName])).rows[0].id;
     }
     const inserted = await client.query(
-      `INSERT INTO people (full_name, email, email_hash, context, organization_id, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [encrypt(fullName.trim()), encrypt(email.trim()), emailHash, context, organizationId, hashPassword(password)]
+      `INSERT INTO people (full_name, email, email_hash, context, organization_id, password_hash, name_latin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        encrypt(fullName.trim()),
+        encrypt(email.trim()),
+        emailHash,
+        context,
+        organizationId,
+        hashPassword(password),
+        nameLatin && nameLatin.trim() ? encrypt(nameLatin.trim()) : null,
+      ]
     );
     await startSession(res, inserted.rows[0].id, client);
     return inserted.rows[0];

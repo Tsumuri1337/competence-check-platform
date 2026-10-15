@@ -48,10 +48,16 @@ function decrypt(value) {
   return Buffer.concat([decipher.update(Buffer.from(ctB64, "base64")), decipher.final()]).toString("utf8");
 }
 
-// Детерминированный хэш email для поиска/уникальности (шифртекст со
-// случайным IV для этого не годится). Нормализуем регистр и пробелы.
-function emailBlindIndex(email) {
-  return crypto.createHmac("sha256", INDEX_KEY).update(String(email).trim().toLowerCase()).digest("hex");
+// Детерминированный хэш для поиска/уникальности по зашифрованному полю
+// (шифртекст со случайным IV для этого не годится). Нормализацию значения
+// делает вызывающий код.
+function blindIndex(value) {
+  return crypto.createHmac("sha256", INDEX_KEY).update(String(value)).digest("hex");
 }
 
-module.exports = { encrypt, decrypt, emailBlindIndex, isEncrypted };
+// Email: нормализуем регистр и пробелы.
+function emailBlindIndex(email) {
+  return blindIndex(String(email).trim().toLowerCase());
+}
+
+module.exports = { encrypt, decrypt, blindIndex, emailBlindIndex, isEncrypted };

@@ -1,0 +1,186 @@
+{
+  "_comment": "Каталог издателей сертификатов для раздела «Мои сертификаты». Проверка сертификата — ручная, ревьюером, по связке «имя как в сертификате + номер»: публичного поиска только по имени ни у одного из издателей нет, а API для автоматической проверки они не предоставляют. credentialLabel/credentialHint — что спросить у участника; verifyUrl/verifyHow — куда идти ревьюеру и что вводить; verifyUrlConfirmed=false — адрес не удалось подтвердить по официальному источнику при составлении каталога, ревьюеру показывается предупреждение. nameScript — каким письмом имя напечатано в сертификате (latin/cyrillic). competences — slug'и из competences.json; standards — коды профстандартов, к которым сертификат относится напрямую (для НОК).",
+  "issuers": [
+    {
+      "slug": "cisco",
+      "name": "Cisco",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Verification number",
+      "credentialHint": "Код подлинности на сертификате (обычно в левом нижнем углу, рядом с Cisco ID вида CSCO…). Не путайте с Cisco ID.",
+      "verifyUrl": "https://www.cisco.com/go/verifycertificate",
+      "verifyUrlConfirmed": true,
+      "verifyHow": "Введите verification number; сверьте имя и название сертификации в ответе.",
+      "certifications": [
+        { "name": "CCNA", "competences": ["network-security"] },
+        { "name": "CCNP Security", "competences": ["network-security", "security-tools"] },
+        { "name": "CCNP Enterprise", "competences": ["network-security"] },
+        { "name": "CCIE Security", "competences": ["network-security", "security-tools", "security-architecture"] },
+        { "name": "Cisco Certified CyberOps Associate", "competences": ["incident-response"] },
+        { "name": "Cisco Certified CyberOps Professional", "competences": ["incident-response", "forensics"] }
+      ]
+    },
+    {
+      "slug": "huawei",
+      "name": "Huawei",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Certificate number",
+      "credentialHint": "Номер электронного сертификата (e-Cert) из личного кабинета Huawei Talent.",
+      "verifyUrl": "https://e.huawei.com/cn/talent/#/issue/add",
+      "verifyUrlConfirmed": false,
+      "verifyHow": "Публичной страницы проверки по номеру найти не удалось. Запросите подтверждение через обращение в поддержку Huawei Talent (по ссылке) или попросите у участника PDF e-Cert и сверьте номер и имя.",
+      "certifications": [
+        { "name": "HCIA-Security", "competences": ["network-security", "security-tools"] },
+        { "name": "HCIP-Security", "competences": ["network-security", "security-tools"] },
+        { "name": "HCIE-Security", "competences": ["network-security", "security-tools", "security-architecture"] },
+        { "name": "HCIA-Datacom", "competences": ["network-security"] },
+        { "name": "HCIP-Datacom", "competences": ["network-security"] }
+      ]
+    },
+    {
+      "slug": "isc2",
+      "name": "ISC2",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Member ID",
+      "credentialHint": "Номер участника ISC2 (указан в сертификате и в профиле ISC2). Фамилию укажите точно как в профиле ISC2 — проверка чувствительна к регистру.",
+      "verifyUrl": "https://my.isc2.org/s/MemberVerification",
+      "verifyUrlConfirmed": true,
+      "verifyHow": "Введите Member ID и фамилию (с учётом регистра).",
+      "certifications": [
+        { "name": "CISSP", "competences": ["security-management", "security-architecture", "risk-management", "access-control", "cryptography"] },
+        { "name": "CCSP", "competences": ["security-architecture", "cryptography"] },
+        { "name": "SSCP", "competences": ["operations-maintenance", "access-control", "incident-response"] },
+        { "name": "CSSLP", "competences": ["secure-development", "vulnerability-assessment"] },
+        { "name": "CC (Certified in Cybersecurity)", "competences": ["security-fundamentals"] }
+      ]
+    },
+    {
+      "slug": "isaca",
+      "name": "ISACA",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Certificate number",
+      "credentialHint": "Номер сертификата ISACA. Фамилию укажите точно как в профиле ISACA.",
+      "verifyUrl": "https://www.isaca.org/credentialing/verify-a-certification",
+      "verifyUrlConfirmed": true,
+      "verifyHow": "Выберите тип сертификации, введите номер сертификата и фамилию как в профиле ISACA. Без номера ISACA проверяет только по письменному согласию владельца.",
+      "certifications": [
+        { "name": "CISA", "competences": ["certification-attestation", "regulatory-compliance"] },
+        { "name": "CISM", "competences": ["security-management", "risk-management"] },
+        { "name": "CRISC", "competences": ["risk-management"] },
+        { "name": "CDPSE", "competences": ["personal-data"] }
+      ]
+    },
+    {
+      "slug": "ec-council",
+      "name": "EC-Council",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Certification ID",
+      "credentialHint": "Номер сертификации EC-Council (в сертификате и в портале ASPEN). Имя — полностью, как в сертификате.",
+      "verifyUrl": "https://aspen.eccouncil.org/Verify",
+      "verifyUrlConfirmed": false,
+      "verifyHow": "В портале ASPEN (Verify) введите полное имя и Certification ID. Статус «в хорошем положении» (продление по ECE) подтверждает только Member Support по запросу.",
+      "certifications": [
+        { "name": "CEH", "competences": ["vulnerability-assessment", "threat-modeling"] },
+        { "name": "CHFI", "competences": ["forensics", "incident-response"] },
+        { "name": "ECIH", "competences": ["incident-response"] },
+        { "name": "CND", "competences": ["network-security"] }
+      ]
+    },
+    {
+      "slug": "comptia",
+      "name": "CompTIA",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Verification code",
+      "credentialHint": "Код проверки из личного кабинета CompTIA (раздел сертификатов).",
+      "verifyUrl": "https://www.certmetrics.com/comptia/public/verification.aspx",
+      "verifyUrlConfirmed": false,
+      "verifyHow": "Введите verification code; сверьте имя и сертификацию в ответе.",
+      "certifications": [
+        { "name": "Security+", "competences": ["security-fundamentals"] },
+        { "name": "CySA+", "competences": ["incident-response", "vulnerability-assessment"] },
+        { "name": "PenTest+", "competences": ["vulnerability-assessment"] },
+        { "name": "SecurityX (CASP+)", "competences": ["security-architecture"] },
+        { "name": "Network+", "competences": ["network-security"] }
+      ]
+    },
+    {
+      "slug": "pecb",
+      "name": "PECB (ISO/IEC)",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Certificate ID",
+      "credentialHint": "Номер сертификата PECB. Сам ISO людей не сертифицирует: «ISO 27001 Lead Auditor» и т.п. выдают органы вроде PECB — выберите здесь, если сертификат от PECB, иначе — «Другой международный».",
+      "verifyUrl": "https://pecb.com/en/certificate-verification",
+      "verifyUrlConfirmed": true,
+      "verifyHow": "Введите данные сертификата в форме проверки PECB; если результата нет — запрос на support@pecb.com.",
+      "certifications": [
+        { "name": "ISO/IEC 27001 Lead Auditor", "competences": ["certification-attestation", "regulatory-compliance"] },
+        { "name": "ISO/IEC 27001 Lead Implementer", "competences": ["security-management", "security-documentation"] },
+        { "name": "ISO/IEC 27005 Risk Manager", "competences": ["risk-management"] },
+        { "name": "ISO/IEC 27035 Lead Incident Manager", "competences": ["incident-response"] }
+      ]
+    },
+    {
+      "slug": "other-intl",
+      "name": "Другой международный",
+      "region": "intl",
+      "nameScript": "latin",
+      "credentialLabel": "Номер / ID сертификата",
+      "credentialHint": "Номер или код проверки, напечатанный на сертификате. Если есть ссылка на бейдж (Credly и т.п.) — укажите её.",
+      "verifyUrl": null,
+      "verifyUrlConfirmed": false,
+      "verifyHow": "Найдите страницу проверки издателя или откройте ссылку на бейдж; сверьте имя и номер.",
+      "certifications": []
+    },
+    {
+      "slug": "nok",
+      "name": "Свидетельство о квалификации (НОК)",
+      "region": "ru",
+      "nameScript": "cyrillic",
+      "credentialLabel": "Регистрационный номер свидетельства",
+      "credentialHint": "Номер, присвоенный при внесении свидетельства в реестр НОК. ФИО — как в паспорте (так оно напечатано в свидетельстве).",
+      "verifyUrl": "https://nok-nark.ru/",
+      "verifyUrlConfirmed": false,
+      "verifyHow": "Проверьте номер в реестре сведений о проведении НОК (Национальное агентство развития квалификаций, порядок — приказ Минтруда № 649н); сверьте ФИО и наименование квалификации. Если реестр недоступен — запрос в центр оценки квалификации, выдавший свидетельство.",
+      "certifications": [
+        { "name": "Квалификация по профстандарту 06.030", "competences": [], "standards": ["06.030"] },
+        { "name": "Квалификация по профстандарту 06.032", "competences": [], "standards": ["06.032"] },
+        { "name": "Квалификация по профстандарту 06.033", "competences": [], "standards": ["06.033"] },
+        { "name": "Квалификация по профстандарту 06.034", "competences": [], "standards": ["06.034"] },
+        { "name": "Квалификация по профстандарту 06.053", "competences": [], "standards": ["06.053"] }
+      ]
+    },
+    {
+      "slug": "frdo",
+      "name": "Диплом (ВО / профпереподготовка)",
+      "region": "ru",
+      "nameScript": "cyrillic",
+      "credentialLabel": "Серия и номер диплома",
+      "credentialHint": "Серия и номер диплома о высшем образовании или о профессиональной переподготовке (от 250 часов). ФИО — как в дипломе.",
+      "verifyUrl": "https://obrnadzor.gov.ru/",
+      "verifyUrlConfirmed": false,
+      "verifyHow": "На портале Рособрнадзора: раздел ФРДО (федеральный реестр сведений о документах об образовании) → «Сервис поиска сведений о документах об образовании». Если записи нет — уточните у организации, передала ли она данные в ФИС ФРДО.",
+      "certifications": [
+        { "name": "Диплом о высшем образовании (информационная безопасность)", "competences": ["security-fundamentals"] },
+        { "name": "Диплом о профессиональной переподготовке (информационная безопасность)", "competences": ["security-fundamentals"] }
+      ]
+    },
+    {
+      "slug": "other-ru",
+      "name": "Российский вендор / учебный центр",
+      "region": "ru",
+      "nameScript": "cyrillic",
+      "credentialLabel": "Номер сертификата / удостоверения",
+      "credentialHint": "Например, курсы «Лаборатории Касперского», Positive Technologies, «Кода Безопасности», ИнфоТеКС, удостоверение о повышении квалификации. Укажите в названии, кто выдал.",
+      "verifyUrl": null,
+      "verifyUrlConfirmed": false,
+      "verifyHow": "Единого реестра нет: запросите подтверждение у выдавшего учебного центра. Удостоверения о повышении квалификации лицензированных организаций также есть в ФИС ФРДО.",
+      "certifications": []
+    }
+  ]
+}
