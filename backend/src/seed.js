@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
-const { query, pool } = require("./db");
+const { query, transaction, pool } = require("./db");
 const { hashPassword } = require("./lib/auth");
+const { rebuildIndex } = require("./lib/competences");
 
 const CONTENT_DIR = path.join(__dirname, "content");
 
@@ -102,6 +103,10 @@ async function seed() {
   for (const code of STANDARD_FILES) {
     await loadStandard(code);
   }
+  // Индекс пересобирается при каждом seed — и после загрузки новых
+  // стандартов, и после правки таксономии на уже загруженной БД.
+  const stats = await transaction((client) => rebuildIndex(client));
+  console.log(`Индекс компетенций: ${stats.competences} областей, ${stats.links} связей`);
   await upsertReviewer("А. Ревьюер", "reviewer@example.ru", "reviewer", "reviewer123");
   console.log("Seed complete. Демо-ревьюер: reviewer@example.ru / reviewer123");
 }

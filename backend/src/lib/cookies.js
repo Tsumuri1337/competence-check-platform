@@ -14,17 +14,17 @@ function parseCookies(header) {
 }
 
 const SESSION_COOKIE = "reviewer_session";
+// Отдельная кука для участника (кандидат/сотрудник): сессии ревьюера и
+// участника не пересекаются, и одна не открывает эндпоинты другой.
+const PARTICIPANT_SESSION_COOKIE = "participant_session";
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 дней
 
-function setSessionCookie(res, token) {
-  res.setHeader(
-    "Set-Cookie",
-    `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; SameSite=Lax`
-  );
+function setSessionCookie(res, token, name = SESSION_COOKIE) {
+  res.setHeader("Set-Cookie", `${name}=${token}; HttpOnly; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; SameSite=Lax`);
 }
 
-function clearSessionCookie(res) {
-  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
+function clearSessionCookie(res, name = SESSION_COOKIE) {
+  res.setHeader("Set-Cookie", `${name}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
 }
 
-module.exports = { parseCookies, setSessionCookie, clearSessionCookie, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS };
+module.exports = { parseCookies, setSessionCookie, clearSessionCookie, SESSION_COOKIE, PARTICIPANT_SESSION_COOKIE, SESSION_MAX_AGE_SECONDS };

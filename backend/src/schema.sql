@@ -36,6 +36,25 @@ CREATE TABLE IF NOT EXISTS competency_items (
   text TEXT NOT NULL
 );
 
+-- Предметный индекс компетенций: тематические области ИБ (сети, криптография,
+-- криминалистика, ...) поперёк профстандартов. Связь с пунктами знаний/умений
+-- строится по дословному тексту пункта (src/content/competences.json,
+-- src/lib/competences.js) и пересобирается `npm run index-competences`.
+CREATE TABLE IF NOT EXISTS competences (
+  id SERIAL PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,           -- 'network-security', 'forensics', ...
+  title TEXT NOT NULL,
+  description TEXT,
+  position INTEGER NOT NULL DEFAULT 0  -- порядок показа, как в competences.json
+);
+
+CREATE TABLE IF NOT EXISTS competence_items (
+  competence_id INTEGER NOT NULL REFERENCES competences(id) ON DELETE CASCADE,
+  competency_item_id INTEGER NOT NULL REFERENCES competency_items(id) ON DELETE CASCADE,
+  PRIMARY KEY (competence_id, competency_item_id)
+);
+CREATE INDEX IF NOT EXISTS competence_items_item ON competence_items(competency_item_id);
+
 -- Авторский тестовый контент (не из профстандарта напрямую — вопросы и
 -- задания составлены нами на основе транскрибированных знаний/умений).
 
@@ -77,6 +96,20 @@ CREATE TABLE IF NOT EXISTS people (
 ALTER TABLE people ADD COLUMN IF NOT EXISTS email_hash TEXT;
 ALTER TABLE people DROP CONSTRAINT IF EXISTS people_email_key;
 CREATE UNIQUE INDEX IF NOT EXISTS people_email_hash_key ON people(email_hash);
+
+-- Аккаунт участника (кандидат/сотрудник): вход по email/паролю, как у
+-- ревьюера (scrypt "соль:хэш", см. src/lib/auth.js). NULL — запись создана
+-- до появления входа участников (анонимная проверка по ссылке).
+ALTER TABLE people ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE people ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+CREATE TABLE IF NOT EXISTS participant_sessions (
+  id SERIAL PRIMARY KEY,
+  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,   -- sha256 токена из httpOnly-куки participant_session
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS reviewers (
   id SERIAL PRIMARY KEY,

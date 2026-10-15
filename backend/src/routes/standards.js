@@ -43,6 +43,21 @@ async function getStandardByCode(req, res) {
     [standard.id]
   );
 
+  // Предметные области каждого пункта (см. routes/competences.js).
+  const competencesResult = await db.query(
+    `SELECT cmi.competency_item_id, c.slug
+     FROM competence_items cmi
+     JOIN competences c ON c.id = cmi.competence_id
+     WHERE cmi.competency_item_id = ANY($1)
+     ORDER BY c.position`,
+    [itemsResult.rows.map((i) => i.id)]
+  );
+  const competencesByItem = new Map();
+  for (const r of competencesResult.rows) {
+    if (!competencesByItem.has(r.competency_item_id)) competencesByItem.set(r.competency_item_id, []);
+    competencesByItem.get(r.competency_item_id).push(r.slug);
+  }
+
   const itemsByLaborFunction = new Map();
   for (const item of itemsResult.rows) {
     if (!itemsByLaborFunction.has(item.labor_function_id)) itemsByLaborFunction.set(item.labor_function_id, []);
@@ -52,12 +67,13 @@ async function getStandardByCode(req, res) {
   const laborFunctionsByGf = new Map();
   for (const lf of lfResult.rows) {
     const items = itemsByLaborFunction.get(lf.id) || [];
+    const view = (i) => ({ id: i.id, text: i.text, competences: competencesByItem.get(i.id) || [] });
     const laborFunction = {
       id: lf.id,
       code: lf.code,
       title: lf.title,
-      knowledge: items.filter((i) => i.kind === "knowledge").map((i) => ({ id: i.id, text: i.text })),
-      skills: items.filter((i) => i.kind === "skill").map((i) => ({ id: i.id, text: i.text })),
+      knowledge: items.filter((i) => i.kind === "knowledge").map(view),
+      skills: items.filter((i) => i.kind === "skill").map(view),
     };
     if (!laborFunctionsByGf.has(lf.generalized_function_id)) laborFunctionsByGf.set(lf.generalized_function_id, []);
     laborFunctionsByGf.get(lf.generalized_function_id).push(laborFunction);

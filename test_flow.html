@@ -77,7 +77,7 @@
   .field.has-error .field-label{color:var(--danger);}
   .field-label{display:block;font-size:13.5px;font-weight:500;margin-bottom:8px;}
   .field-label .req{color:var(--danger);margin-left:2px;}
-  input[type=text], input[type=email], select, textarea{
+  input[type=text], input[type=email], input[type=password], select, textarea{
     width:100%;
     border:1px solid var(--line-strong);
     border-radius:var(--radius);
@@ -181,16 +181,100 @@
     display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:20px;}
 
   .hidden{display:none !important;}
+
+  /* Вход/регистрация участника: пока нет сессии, шаги проверки скрыты. */
+  body.logged-out #steps, body.logged-out .card[id^="step-"], body.logged-out #restart-link{display:none !important;}
+  .account-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+    font-size:13px;color:var(--ink-soft);margin-bottom:20px;}
+  .account-bar b{color:var(--ink);font-weight:600;}
+  .account-actions{display:flex;gap:14px;}
+  .auth-tabs{display:flex;gap:10px;margin-bottom:24px;}
+  #register-fields .field:last-child{margin-bottom:20px;}
+  .my-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);}
+  .my-list li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .my-list .my-meta{color:var(--ink-soft);font-size:12px;}
+  .my-status{font-size:12px;white-space:nowrap;}
   .note{margin-top:32px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
 </style>
 </head>
-<body>
+<body class="logged-out">
 <div class="shell">
 
   <div class="doc-head">
     <div class="doc-eyebrow">Проверка компетенций</div>
     <h1 class="doc-title">Тестирование на соответствие профстандарту</h1>
     <p class="doc-sub">Самооценка (по желанию), тестирование и практическое задание — на основе действующих профессиональных стандартов Минтруда России в области информационной безопасности.</p>
+  </div>
+
+  <div class="account-bar hidden" id="account-bar">
+    <span>Вы вошли как <b id="account-name"></b> <span id="account-meta"></span></span>
+    <span class="account-actions">
+      <button type="button" class="link-btn" id="pw-toggle-btn">Сменить пароль</button>
+      <button type="button" class="link-btn" id="logout-btn">Выйти</button>
+    </span>
+  </div>
+
+  <div class="card hidden" id="pw-card">
+    <div class="card-head">
+      <h2 class="card-title">Смена пароля</h2>
+      <p class="card-sub">Остальные ваши сессии (на других устройствах) будут завершены.</p>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label class="field-label" for="pw-current">Текущий пароль</label>
+        <input type="password" id="pw-current" autocomplete="current-password" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="pw-new">Новый пароль (от 10 символов)</label>
+        <input type="password" id="pw-new" autocomplete="new-password" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-secondary" id="pw-cancel-btn">Отмена</button>
+      <button type="button" class="btn" id="pw-save-btn">Сохранить</button>
+    </div>
+  </div>
+
+  <!-- Вход / регистрация участника (кандидат или сотрудник) -->
+  <div class="card hidden" id="auth-card">
+    <div class="auth-tabs radio-group" id="auth-tabs">
+      <button type="button" class="radio-pill selected" data-mode="login">Вход</button>
+      <button type="button" class="radio-pill" data-mode="register">Регистрация</button>
+    </div>
+    <div class="card-head">
+      <h2 class="card-title" id="auth-title">Вход</h2>
+      <p class="card-sub" id="auth-sub">Войдите, чтобы начать проверку или продолжить начатую.</p>
+    </div>
+    <div id="register-fields" class="hidden">
+      <div class="field">
+        <label class="field-label">Я проверяюсь как<span class="req">*</span></label>
+        <div class="radio-group" id="context-group">
+          <button type="button" class="radio-pill selected" data-value="employee">Сотрудник компании</button>
+          <button type="button" class="radio-pill" data-value="candidate">Кандидат на вакансию</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="f-fullname">ФИО<span class="req">*</span></label>
+        <input type="text" id="f-fullname" placeholder="Иванова Мария Сергеевна" autocomplete="name" />
+      </div>
+      <div class="field" id="org-field">
+        <label class="field-label" for="f-org">Организация</label>
+        <input type="text" id="f-org" placeholder="ООО «Компания»" autocomplete="organization" />
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label class="field-label" for="f-email">Email<span class="req">*</span></label>
+        <input type="email" id="f-email" placeholder="maria@example.ru" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label class="field-label" for="f-password">Пароль<span class="req">*</span></label>
+        <input type="password" id="f-password" autocomplete="current-password" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="auth-submit-btn">Войти</button>
+    </div>
   </div>
 
   <div class="banner info hidden" id="resume-banner">
@@ -204,50 +288,33 @@
   <div class="banner error hidden" id="load-error"></div>
 
   <div class="restart-link hidden" id="restart-link">
-    <button type="button" class="link-btn" id="restart-btn">← Начать заново (выбрать другую роль или профстандарт)</button>
+    <button type="button" class="link-btn" id="restart-btn">← К выбору профстандарта</button>
   </div>
 
   <div class="steps" id="steps">
-    <div class="step active" data-step="0"><div class="step-dot">1</div><div class="step-label">Анкета</div></div>
+    <div class="step active" data-step="0"><div class="step-dot">1</div><div class="step-label">Начало</div></div>
     <div class="step" data-step="1"><div class="step-dot">2</div><div class="step-label">Самооценка</div></div>
     <div class="step" data-step="2"><div class="step-dot">3</div><div class="step-label">Тестирование</div></div>
     <div class="step" data-step="3"><div class="step-dot">4</div><div class="step-label">Практическое задание</div></div>
     <div class="step" data-step="4"><div class="step-dot">5</div><div class="step-label">Готово</div></div>
   </div>
 
-  <!-- STEP 0: registration -->
+  <!-- STEP 0: выбор профстандарта (данные участника — из аккаунта) -->
   <div class="card" id="step-0">
     <div class="card-head">
       <h2 class="card-title">Начало проверки</h2>
-      <p class="card-sub">Укажите свои данные и выберите профстандарт, по которому проходите проверку.</p>
+      <p class="card-sub">Выберите профстандарт, по которому проходите проверку.</p>
     </div>
     <div class="field">
-      <label class="field-label">Я проверяюсь как<span class="req">*</span></label>
-      <div class="radio-group" id="context-group">
-        <button type="button" class="radio-pill selected" data-value="employee">Сотрудник компании</button>
-        <button type="button" class="radio-pill" data-value="candidate">Кандидат на вакансию</button>
-      </div>
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label class="field-label">ФИО<span class="req">*</span></label>
-        <input type="text" id="f-fullname" placeholder="Иванова Мария Сергеевна" />
-      </div>
-      <div class="field">
-        <label class="field-label">Email<span class="req">*</span></label>
-        <input type="email" id="f-email" placeholder="maria@example.ru" />
-      </div>
-    </div>
-    <div class="field" id="org-field">
-      <label class="field-label">Организация</label>
-      <input type="text" id="f-org" placeholder="ООО «Компания»" />
-    </div>
-    <div class="field">
-      <label class="field-label">Профессиональный стандарт<span class="req">*</span></label>
+      <label class="field-label" for="f-standard">Профессиональный стандарт<span class="req">*</span></label>
       <select id="f-standard"><option value="">Загрузка…</option></select>
     </div>
     <div class="btn-row">
       <button class="btn" id="start-btn">Начать проверку</button>
+    </div>
+    <div id="my-assessments-section" class="hidden" style="margin-top:32px">
+      <h3 class="field-label">Мои проверки</h3>
+      <ul class="my-list" id="my-assessments"></ul>
     </div>
   </div>
 
@@ -341,6 +408,7 @@
 
   let assessmentId = null;
   let selectedContext = "employee";
+  let registerContext = "employee"; // выбор в форме регистрации
   let selectedStandard = null;
   let quizQuestions = [];
   let quizAnswers = [];
@@ -348,6 +416,7 @@
   let practicalTasks = [];
   let selfAssessmentItems = [];
   let quizScore = null;
+  let participant = null; // текущий вошедший участник (GET /api/participant/me)
 
   const loadError = document.getElementById("load-error");
   function showError(msg){ loadError.textContent = msg; loadError.classList.remove("hidden"); }
@@ -359,7 +428,7 @@
   function saveProgress(step){
     try {
       if (!assessmentId) return;
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ assessmentId, step, quizScore, quizAnswers, currentQuizIndex }));
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ participantId: participant && participant.id, assessmentId, step, quizScore, quizAnswers, currentQuizIndex }));
     } catch (e) { /* localStorage недоступен — просто не восстанавливаемся */ }
   }
   function loadSavedProgress(){
@@ -393,17 +462,14 @@
     quizQuestions = [];
     quizAnswers = [];
     currentQuizIndex = 0;
-    document.getElementById("f-fullname").value = "";
-    document.getElementById("f-email").value = "";
-    document.getElementById("f-org").value = "";
-    [document.getElementById("f-fullname"), document.getElementById("f-email"), document.getElementById("f-standard")]
-      .forEach(el => el.classList.remove("input-error"));
+    document.getElementById("f-standard").classList.remove("input-error");
     hideError();
     goToStep(0);
+    loadMyAssessments();
   }
 
   document.getElementById("restart-btn").addEventListener("click", () => {
-    if (!confirm("Начать заново? Текущий прогресс в этой проверке будет потерян.")) return;
+    if (!confirm("Начать заново? Незавершённая проверка останется в списке «Мои проверки».")) return;
     resetToRegistration();
   });
 
@@ -411,8 +477,8 @@
     btn.addEventListener("click", () => {
       document.querySelectorAll("#context-group .radio-pill").forEach(b => b.classList.remove("selected"));
       btn.classList.add("selected");
-      selectedContext = btn.dataset.value;
-      document.getElementById("org-field").classList.toggle("hidden", selectedContext === "candidate");
+      registerContext = btn.dataset.value;
+      document.getElementById("org-field").classList.toggle("hidden", registerContext === "candidate");
     });
   });
 
@@ -438,51 +504,18 @@
     return "Эта самооценка не отражает ваши реальные навыки и способности применительно к данной позиции. Прохождение самооценки необязательно, однако мы настоятельно рекомендуем её пройти — она помогает нам составить более полное представление о вас как о кандидате.";
   }
 
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const fullNameInput = document.getElementById("f-fullname");
-  const emailInput = document.getElementById("f-email");
   const standardSelect = document.getElementById("f-standard");
-  [fullNameInput, emailInput].forEach(el => el.addEventListener("input", () => el.classList.remove("input-error")));
   standardSelect.addEventListener("change", () => standardSelect.classList.remove("input-error"));
 
   document.getElementById("start-btn").addEventListener("click", async () => {
     hideError();
-    [fullNameInput, emailInput, standardSelect].forEach(el => el.classList.remove("input-error"));
-
-    const fullName = fullNameInput.value.trim();
-    const email = emailInput.value.trim();
-    const organizationName = document.getElementById("f-org").value.trim();
+    standardSelect.classList.remove("input-error");
     const standardCode = standardSelect.value;
     const standardTitle = standardSelect.selectedOptions[0]?.textContent.split(" — ").slice(1).join(" — ") || standardCode;
-
-    const problems = [];
-    let firstInvalid = null;
-    if (!fullName) {
-      fullNameInput.classList.add("input-error");
-      problems.push("укажите ФИО");
-      firstInvalid = firstInvalid || fullNameInput;
-    }
-    if (!email) {
-      emailInput.classList.add("input-error");
-      problems.push("укажите email");
-      firstInvalid = firstInvalid || emailInput;
-    } else if (!EMAIL_RE.test(email)) {
-      emailInput.classList.add("input-error");
-      problems.push("введите корректный адрес электронной почты (например, name@example.ru)");
-      firstInvalid = firstInvalid || emailInput;
-    }
     if (!standardCode) {
       standardSelect.classList.add("input-error");
-      problems.push("выберите профессиональный стандарт");
-      firstInvalid = firstInvalid || standardSelect;
-    }
-
-    if (problems.length) {
-      const message = problems.length === 1
-        ? problems[0][0].toUpperCase() + problems[0].slice(1) + "."
-        : "Заполните форму корректно: " + problems.join(", ") + ".";
-      showError(message);
-      firstInvalid.focus();
+      showError("Выберите профессиональный стандарт.");
+      standardSelect.focus();
       return;
     }
 
@@ -490,26 +523,27 @@
       const res = await fetch(`${API_BASE}/api/assessments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          standardCode,
-          context: selectedContext,
-          person: { fullName, email, organizationName: organizationName || undefined },
-        }),
+        body: JSON.stringify({ standardCode }),
       });
+      if (res.status === 401) { showAuth("Сессия истекла — войдите снова."); return; }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Не удалось начать проверку");
       assessmentId = data.assessmentId;
+      selectedContext = participant.context;
       selectedStandard = { code: standardCode, title: standardTitle };
-
-      document.getElementById("overview-text").textContent = overviewCopy(selectedContext, standardTitle);
-      document.getElementById("selfcheck-offer-text").textContent = selfcheckOfferCopy(selectedContext);
-      document.getElementById("selfcheck-offer").classList.remove("hidden");
-      document.getElementById("self-assessment-section").classList.add("hidden");
+      showOverview();
       goToStep(1);
     } catch (err) {
       showError(err.message);
     }
   });
+
+  function showOverview(){
+    document.getElementById("overview-text").textContent = overviewCopy(selectedContext, selectedStandard.title);
+    document.getElementById("selfcheck-offer-text").textContent = selfcheckOfferCopy(selectedContext);
+    document.getElementById("selfcheck-offer").classList.remove("hidden");
+    document.getElementById("self-assessment-section").classList.add("hidden");
+  }
 
   document.getElementById("selfcheck-skip-btn").addEventListener("click", async () => {
     hideError();
@@ -842,10 +876,7 @@
     selectedStandard = { code: data.standard_code, title: data.standard_title };
     try {
       if (step === 1) {
-        document.getElementById("overview-text").textContent = overviewCopy(selectedContext, selectedStandard.title);
-        document.getElementById("selfcheck-offer-text").textContent = selfcheckOfferCopy(selectedContext);
-        document.getElementById("selfcheck-offer").classList.remove("hidden");
-        document.getElementById("self-assessment-section").classList.add("hidden");
+        showOverview();
         goToStep(1);
       } else if (step === 2) {
         await loadQuiz(saved);
@@ -882,6 +913,8 @@
   async function checkForSavedProgress(){
     const saved = loadSavedProgress();
     if (!saved || !saved.assessmentId || !saved.step) return;
+    // Прогресс другого аккаунта на этом устройстве не предлагаем.
+    if (saved.participantId !== participant.id) { clearSavedProgress(); return; }
     try {
       const res = await fetch(`${API_BASE}/api/assessments/${saved.assessmentId}`);
       if (!res.ok) { clearSavedProgress(); return; }
@@ -892,8 +925,197 @@
     } catch (e) { /* backend недоступен — просто не предлагаем восстановление */ }
   }
 
+  // ---- Аккаунт участника: вход, регистрация, выход, смена пароля ----
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  let authMode = "login";
+  const authInputs = ["f-fullname", "f-email", "f-password"].map(id => document.getElementById(id));
+  authInputs.forEach(el => el.addEventListener("input", () => el.classList.remove("input-error")));
+
+  function setAuthMode(mode){
+    authMode = mode;
+    document.querySelectorAll("#auth-tabs .radio-pill").forEach(b => b.classList.toggle("selected", b.dataset.mode === mode));
+    const isRegister = mode === "register";
+    document.getElementById("register-fields").classList.toggle("hidden", !isRegister);
+    document.getElementById("auth-title").textContent = isRegister ? "Регистрация" : "Вход";
+    document.getElementById("auth-sub").textContent = isRegister
+      ? "Создайте аккаунт: с ним вы сможете вернуться к начатой проверке с любого устройства."
+      : "Войдите, чтобы начать проверку или продолжить начатую.";
+    document.getElementById("auth-submit-btn").textContent = isRegister ? "Зарегистрироваться" : "Войти";
+    document.getElementById("f-password").setAttribute("autocomplete", isRegister ? "new-password" : "current-password");
+    authInputs.forEach(el => el.classList.remove("input-error"));
+    hideError();
+  }
+  document.querySelectorAll("#auth-tabs .radio-pill").forEach(b => b.addEventListener("click", () => setAuthMode(b.dataset.mode)));
+
+  function showAuth(message){
+    participant = null;
+    document.body.classList.add("logged-out");
+    document.getElementById("auth-card").classList.remove("hidden");
+    document.getElementById("account-bar").classList.add("hidden");
+    document.getElementById("pw-card").classList.add("hidden");
+    document.getElementById("resume-banner").classList.add("hidden");
+    if (message) showError(message); else hideError();
+  }
+
+  async function setParticipant(p){
+    participant = p;
+    document.body.classList.remove("logged-out");
+    document.getElementById("auth-card").classList.add("hidden");
+    document.getElementById("account-bar").classList.remove("hidden");
+    document.getElementById("account-name").textContent = p.fullName;
+    const role = p.context === "candidate" ? "кандидат" : "сотрудник";
+    document.getElementById("account-meta").textContent = `(${p.email}, ${role}${p.organizationName ? ", " + p.organizationName : ""})`;
+    selectedContext = p.context;
+    document.getElementById("f-password").value = "";
+    hideError();
+    goToStep(0);
+    await loadMyAssessments();
+    await checkForSavedProgress();
+  }
+
+  document.getElementById("auth-submit-btn").addEventListener("click", async () => {
+    hideError();
+    const fullNameInput = document.getElementById("f-fullname");
+    const emailInput = document.getElementById("f-email");
+    const passwordInput = document.getElementById("f-password");
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const isRegister = authMode === "register";
+
+    const problems = [];
+    let firstInvalid = null;
+    const flag = (el, msg) => { el.classList.add("input-error"); problems.push(msg); firstInvalid = firstInvalid || el; };
+    if (isRegister && !fullNameInput.value.trim()) flag(fullNameInput, "укажите ФИО");
+    if (!email) flag(emailInput, "укажите email");
+    else if (!EMAIL_RE.test(email)) flag(emailInput, "введите корректный адрес электронной почты (например, name@example.ru)");
+    if (!password) flag(passwordInput, "введите пароль");
+    else if (isRegister && password.length < 10) flag(passwordInput, "пароль должен быть не короче 10 символов");
+    if (problems.length) {
+      showError(problems.length === 1
+        ? problems[0][0].toUpperCase() + problems[0].slice(1) + "."
+        : "Заполните форму корректно: " + problems.join(", ") + ".");
+      firstInvalid.focus();
+      return;
+    }
+
+    const body = isRegister
+      ? {
+          fullName: fullNameInput.value.trim(),
+          email,
+          password,
+          context: registerContext,
+          organizationName: registerContext === "employee" ? document.getElementById("f-org").value.trim() || undefined : undefined,
+        }
+      : { email, password };
+    try {
+      const res = await fetch(`${API_BASE}/api/participant/${isRegister ? "register" : "login"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось войти");
+      await setParticipant(data);
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+  document.getElementById("f-password").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("auth-submit-btn").click();
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    try { await fetch(`${API_BASE}/api/participant/logout`, { method: "POST" }); } catch (e) { /* всё равно выходим локально */ }
+    clearSavedProgress();
+    assessmentId = null;
+    quizScore = null;
+    quizAnswers = [];
+    setAuthMode("login");
+    showAuth();
+  });
+
+  document.getElementById("pw-toggle-btn").addEventListener("click", () => {
+    document.getElementById("pw-card").classList.toggle("hidden");
+  });
+  document.getElementById("pw-cancel-btn").addEventListener("click", () => {
+    document.getElementById("pw-card").classList.add("hidden");
+  });
+  document.getElementById("pw-save-btn").addEventListener("click", async () => {
+    hideError();
+    const currentPassword = document.getElementById("pw-current").value;
+    const newPassword = document.getElementById("pw-new").value;
+    try {
+      const res = await fetch(`${API_BASE}/api/participant/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сменить пароль");
+      document.getElementById("pw-current").value = "";
+      document.getElementById("pw-new").value = "";
+      document.getElementById("pw-card").classList.add("hidden");
+      alert("Пароль изменён.");
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  // «Мои проверки»: незавершённую можно продолжить с любого устройства —
+  // выданные вопросы и задания хранятся на сервере. Номер шага и
+  // недоотправленные ответы теста есть только в localStorage этого браузера,
+  // поэтому без них продолжаем с обзора (самооценка/тест).
+  const STATUS_LABELS = { in_progress: "не завершена", completed: "завершена" };
+  async function loadMyAssessments(){
+    const section = document.getElementById("my-assessments-section");
+    const list = document.getElementById("my-assessments");
+    try {
+      const res = await fetch(`${API_BASE}/api/participant/assessments`);
+      if (res.status === 401) { showAuth("Сессия истекла — войдите снова."); return; }
+      if (!res.ok) return;
+      const items = await res.json();
+      section.classList.toggle("hidden", items.length === 0);
+      list.innerHTML = "";
+      for (const a of items) {
+        const li = document.createElement("li");
+        const info = document.createElement("div");
+        const title = document.createElement("div");
+        title.textContent = `${a.standard_code} — ${a.standard_title}`;
+        const meta = document.createElement("div");
+        meta.className = "my-meta";
+        meta.textContent = `Начата ${new Date(a.created_at).toLocaleDateString("ru-RU")} · ${STATUS_LABELS[a.status] || a.status}`;
+        info.append(title, meta);
+        li.append(info);
+        if (a.status === "in_progress") {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "btn btn-secondary";
+          btn.textContent = "Продолжить";
+          btn.addEventListener("click", () => {
+            const saved = loadSavedProgress();
+            const sameOne = saved && saved.assessmentId === a.id && saved.participantId === participant.id && saved.step;
+            resumeAt(sameOne ? saved : { step: 1 }, a);
+          });
+          li.append(btn);
+        } else {
+          const done = document.createElement("span");
+          done.className = "my-status";
+          done.textContent = "✓ отправлена на проверку";
+          li.append(done);
+        }
+        list.append(li);
+      }
+    } catch (e) { /* список необязателен — не мешаем начать новую проверку */ }
+  }
+
+  async function checkSession(){
+    const res = await fetch(`${API_BASE}/api/participant/me`);
+    if (res.ok) await setParticipant(await res.json());
+    else showAuth();
+  }
+
   loadStandards()
-    .then(checkForSavedProgress)
+    .then(checkSession)
     .catch(err => showError(err.message + " — проверьте, что backend запущен на " + API_BASE));
 </script>
 </body>

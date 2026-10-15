@@ -35,6 +35,24 @@ async function loginReviewer(baseUrl) {
   return { cookie, reviewer: await res.json() };
 }
 
+// Регистрирует участника (кандидат/сотрудник) и возвращает куку его сессии.
+const PARTICIPANT_PASSWORD = "participant-pass-123";
+async function registerParticipant(baseUrl, { email, context = "candidate", fullName = "Тестовый Участник", organizationName } = {}) {
+  const res = await fetch(`${baseUrl}/api/participant/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, context, fullName, organizationName, password: PARTICIPANT_PASSWORD }),
+  });
+  if (res.status !== 201) throw new Error(`Регистрация участника не удалась: ${res.status} ${await res.text()}`);
+  const cookie = res.headers.get("set-cookie").split(";")[0];
+  return { cookie, participant: await res.json() };
+}
+
+// fetch с заранее подставленной кукой сессии.
+function fetchAs(cookie) {
+  return (url, opts = {}) => fetch(url, { ...opts, headers: { ...(opts.headers || {}), Cookie: cookie } });
+}
+
 // Полная очистка проверки: assessment + всё, что на него ссылается и не
 // удаляется каскадом (access_log — единственная такая таблица, см. schema.sql).
 async function cleanupAssessment(assessmentId) {
@@ -46,4 +64,14 @@ async function cleanupPerson(email) {
   await pool.query("DELETE FROM people WHERE email_hash = $1", [emailBlindIndex(email)]);
 }
 
-module.exports = { startTestServer, uniqueEmail, loginReviewer, cleanupAssessment, cleanupPerson, pool };
+module.exports = {
+  startTestServer,
+  uniqueEmail,
+  loginReviewer,
+  registerParticipant,
+  fetchAs,
+  PARTICIPANT_PASSWORD,
+  cleanupAssessment,
+  cleanupPerson,
+  pool,
+};

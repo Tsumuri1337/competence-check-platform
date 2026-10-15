@@ -1,13 +1,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { startTestServer, uniqueEmail, cleanupAssessment, cleanupPerson, pool } = require("../test-support/helpers");
+const { startTestServer, uniqueEmail, registerParticipant, fetchAs, cleanupAssessment, cleanupPerson, pool } = require("../test-support/helpers");
 
 let server, baseUrl;
 const email = uniqueEmail("flow");
 let assessmentId;
+let api; // fetch с кукой сессии участника
 
 test.before(async () => {
   ({ server, baseUrl } = await startTestServer());
+  const { cookie } = await registerParticipant(baseUrl, { email, fullName: "Тестовый Кандидат" });
+  api = fetchAs(cookie);
 });
 
 test.after(async () => {
@@ -18,14 +21,10 @@ test.after(async () => {
 });
 
 test("POST /api/assessments starts a new assessment", async () => {
-  const res = await fetch(`${baseUrl}/api/assessments`, {
+  const res = await api(`${baseUrl}/api/assessments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      standardCode: "06.030",
-      context: "candidate",
-      person: { fullName: "Тестовый Кандидат", email },
-    }),
+    body: JSON.stringify({ standardCode: "06.030" }),
   });
   assert.equal(res.status, 201);
   const data = await res.json();
@@ -35,7 +34,7 @@ test("POST /api/assessments starts a new assessment", async () => {
 });
 
 test("GET /api/assessments/:id/quiz draws exactly 50 questions and hides the correct answer", async () => {
-  const res = await fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz`);
+  const res = await api(`${baseUrl}/api/assessments/${assessmentId}/quiz`);
   assert.equal(res.status, 200);
   const quiz = await res.json();
   assert.equal(quiz.length, 50);
@@ -48,8 +47,8 @@ test("GET /api/assessments/:id/quiz draws exactly 50 questions and hides the cor
 
 test("GET /api/assessments/:id/quiz is stable across repeated calls (persisted assignment)", async () => {
   const [res1, res2] = await Promise.all([
-    fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz`),
-    fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz`),
+    api(`${baseUrl}/api/assessments/${assessmentId}/quiz`),
+    api(`${baseUrl}/api/assessments/${assessmentId}/quiz`),
   ]);
   const [quiz1, quiz2] = await Promise.all([res1.json(), res2.json()]);
   assert.deepEqual(quiz1, quiz2);
@@ -70,7 +69,7 @@ test("submitting the canonically-correct answer for every question scores 50/50 
     return { questionId: a.questionId, selectedIndex: presentedIndex };
   });
 
-  const res = await fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz-responses`, {
+  const res = await api(`${baseUrl}/api/assessments/${assessmentId}/quiz-responses`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ responses }),
@@ -84,7 +83,7 @@ test("submitting the canonically-correct answer for every question scores 50/50 
 let taskIds = [];
 
 test("GET /api/assessments/:id/practical-task draws exactly 2 tasks", async () => {
-  const res = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-task`);
+  const res = await api(`${baseUrl}/api/assessments/${assessmentId}/practical-task`);
   assert.equal(res.status, 200);
   const tasks = await res.json();
   assert.equal(tasks.length, 2);
@@ -92,26 +91,26 @@ test("GET /api/assessments/:id/practical-task draws exactly 2 tasks", async () =
 });
 
 test("assessment only completes once every ASSIGNED task (not the whole bank) has a submission", async () => {
-  const before = await fetch(`${baseUrl}/api/assessments/${assessmentId}`).then((r) => r.json());
+  const before = await api(`${baseUrl}/api/assessments/${assessmentId}`).then((r) => r.json());
   assert.equal(before.status, "in_progress");
 
-  const first = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-submission`, {
+  const first = await api(`${baseUrl}/api/assessments/${assessmentId}/practical-submission`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ taskId: taskIds[0], submissionText: "Первое задание, автотест." }),
   });
   assert.equal(first.status, 201);
 
-  const mid = await fetch(`${baseUrl}/api/assessments/${assessmentId}`).then((r) => r.json());
+  const mid = await api(`${baseUrl}/api/assessments/${assessmentId}`).then((r) => r.json());
   assert.equal(mid.status, "in_progress", "should not complete after only 1 of 2 assigned tasks");
 
-  const second = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-submission`, {
+  const second = await api(`${baseUrl}/api/assessments/${assessmentId}/practical-submission`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ taskId: taskIds[1], submissionText: "Второе задание, автотест." }),
   });
   assert.equal(second.status, 201);
 
-  const after = await fetch(`${baseUrl}/api/assessments/${assessmentId}`).then((r) => r.json());
+  const after = await api(`${baseUrl}/api/assessments/${assessmentId}`).then((r) => r.json());
   assert.equal(after.status, "completed");
 });

@@ -4,13 +4,15 @@ const {
   startTestServer,
   uniqueEmail,
   loginReviewer,
+  registerParticipant,
+  fetchAs,
   cleanupAssessment,
   cleanupPerson,
   pool,
 } = require("../test-support/helpers");
 const { encrypt, decrypt, emailBlindIndex } = require("../src/lib/pii");
 
-let server, baseUrl, cookie;
+let server, baseUrl, cookie, api;
 const email = uniqueEmail("pii");
 const fullName = "Шифров Тест Тестович";
 const assessmentIds = [];
@@ -18,6 +20,7 @@ const assessmentIds = [];
 test.before(async () => {
   ({ server, baseUrl } = await startTestServer());
   ({ cookie } = await loginReviewer(baseUrl));
+  api = fetchAs((await registerParticipant(baseUrl, { email, fullName })).cookie);
 });
 
 test.after(async () => {
@@ -29,10 +32,10 @@ test.after(async () => {
 });
 
 async function start() {
-  const res = await fetch(`${baseUrl}/api/assessments`, {
+  const res = await api(`${baseUrl}/api/assessments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ standardCode: "06.030", context: "candidate", person: { fullName, email } }),
+    body: JSON.stringify({ standardCode: "06.030" }),
   });
   const { assessmentId } = await res.json();
   assessmentIds.push(assessmentId);
@@ -72,7 +75,7 @@ test("name and email are stored encrypted in the database, not as plaintext", as
   assert.ok(!rows[0].email.includes(email));
 });
 
-test("the same email reuses one person row despite random-IV ciphertext", async () => {
+test("repeated assessments by one account reuse one person row despite random-IV ciphertext", async () => {
   await start();
   const { rows } = await pool.query("SELECT count(*) FROM people WHERE email_hash = $1", [emailBlindIndex(email)]);
   assert.equal(rows[0].count, "1");
@@ -86,8 +89,9 @@ test("reviewer report returns decrypted name and email", async () => {
   assert.equal(data.assessment.email, email);
 });
 
-test("the unauthenticated assessment status endpoint does not leak PII", async () => {
-  const res = await fetch(`${baseUrl}/api/assessments/${assessmentIds[0]}`);
+test("the participant's assessment status endpoint does not return PII", async () => {
+  const res = await api(`${baseUrl}/api/assessments/${assessmentIds[0]}`);
+  assert.equal(res.status, 200);
   const data = await res.json();
   assert.equal("full_name" in data, false);
   assert.equal("email" in data, false);

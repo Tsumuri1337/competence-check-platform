@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 
 const { listStandards, getStandardByCode } = require("./routes/standards");
+const { listCompetences, getCompetence, getStandardCompetences } = require("./routes/competences");
 const {
   startAssessment,
   getAssessment,
@@ -15,6 +16,7 @@ const {
 } = require("./routes/assessments");
 const { listAssessments, getAssessmentReport, scorePracticalSubmission, setDecision } = require("./routes/reviewers");
 const { login, logout, me, changePassword } = require("./routes/auth");
+const participantAuth = require("./routes/participantAuth");
 const { parseCookies } = require("./lib/cookies");
 
 const PORT = process.env.PORT || 3001;
@@ -40,8 +42,18 @@ app.post("/api/auth/logout", logout);
 app.get("/api/auth/me", me);
 app.post("/api/auth/change-password", changePassword);
 
+app.post("/api/participant/register", participantAuth.register);
+app.post("/api/participant/login", participantAuth.login);
+app.post("/api/participant/logout", participantAuth.logout);
+app.get("/api/participant/me", participantAuth.me);
+app.post("/api/participant/change-password", participantAuth.changePassword);
+app.get("/api/participant/assessments", participantAuth.listOwnAssessments);
+
 app.get("/api/standards", listStandards);
 app.get("/api/standards/:code", getStandardByCode);
+app.get("/api/standards/:code/competences", getStandardCompetences);
+app.get("/api/competences", listCompetences);
+app.get("/api/competences/:slug", getCompetence);
 
 app.post("/api/assessments", startAssessment);
 app.get("/api/assessments", listAssessments);

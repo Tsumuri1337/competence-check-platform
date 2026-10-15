@@ -1,5 +1,25 @@
 const db = require("../db");
-const { encrypt, emailBlindIndex } = require("../lib/pii");
+const { resolveParticipantFromSession } = require("./participantAuth");
+
+// Все эндпоинты участника требуют сессию участника (routes/participantAuth.js)
+// и работают только с его собственными проверками: чужая проверка отвечает
+// 404, как несуществующая, — по ответу нельзя перебрать чужие id.
+async function loadOwnAssessment(req, res, columns) {
+  const person = await resolveParticipantFromSession(req);
+  if (!person) {
+    res.status(401).json({ error: "Войдите, чтобы продолжить проверку" });
+    return null;
+  }
+  const assessmentId = Number(req.params.id);
+  const { rows } = Number.isInteger(assessmentId)
+    ? await db.query(`SELECT ${columns} FROM assessments WHERE id = $1 AND person_id = $2`, [assessmentId, person.id])
+    : { rows: [] };
+  if (!rows[0]) {
+    res.status(404).json({ error: "Проверка не найдена" });
+    return null;
+  }
+  return rows[0];
+}
 
 // Каждая проверка получает случайную выборку из общего банка вопросов/
 // заданий — выбирается один раз и сохраняется в assessments.quiz_assignment
@@ -34,17 +54,18 @@ async function ensureTaskAssignment(assessment) {
   return assignment;
 }
 
-// POST /api/assessments
-// body: { standardCode, context: 'employee'|'candidate', person: { fullName, email, organizationName? } }
+// POST /api/assessments  body: { standardCode }
+// Участник берётся из сессии: ФИО, email, контекст (employee/candidate) и
+// организация указаны им при регистрации (routes/participantAuth.js).
 async function startAssessment(req, res) {
-  const { standardCode, context, person } = req.body || {};
-
-  if (!standardCode || !context || !person || !person.fullName || !person.email) {
-    res.status(400).json({ error: "standardCode, context и person.{fullName,email} обязательны" });
+  const person = await resolveParticipantFromSession(req);
+  if (!person) {
+    res.status(401).json({ error: "Войдите, чтобы начать проверку" });
     return;
   }
-  if (!["employee", "candidate"].includes(context)) {
-    res.status(400).json({ error: "context должен быть employee | candidate" });
+  const { standardCode } = req.body || {};
+  if (!standardCode) {
+    res.status(400).json({ error: "standardCode обязателен" });
     return;
   }
 
@@ -55,69 +76,33 @@ async function startAssessment(req, res) {
     return;
   }
 
-  const assessmentId = await db.transaction(async (client) => {
-    let organizationId = null;
-    if (person.organizationName) {
-      const orgResult = await client.query("SELECT id FROM organizations WHERE name = $1", [person.organizationName]);
-      organizationId = orgResult.rows[0]
-        ? orgResult.rows[0].id
-        : (await client.query("INSERT INTO organizations (name) VALUES ($1) RETURNING id", [person.organizationName])).rows[0].id;
-    }
-
-    const emailHash = emailBlindIndex(person.email);
-    const existingPerson = await client.query("SELECT id FROM people WHERE email_hash = $1", [emailHash]);
-    const personId = existingPerson.rows[0]
-      ? existingPerson.rows[0].id
-      : (
-          await client.query(
-            "INSERT INTO people (full_name, email, email_hash, context, organization_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-            [encrypt(person.fullName), encrypt(person.email), emailHash, context, organizationId]
-          )
-        ).rows[0].id;
-
-    const appResult = await client.query(
-      "INSERT INTO assessments (person_id, standard_id, context) VALUES ($1, $2, $3) RETURNING id",
-      [personId, standard.id, context]
-    );
-    return appResult.rows[0].id;
-  });
-
-  res.status(201).json({ assessmentId, status: "in_progress" });
+  const { rows } = await db.query(
+    "INSERT INTO assessments (person_id, standard_id, context) VALUES ($1, $2, $3) RETURNING id",
+    [person.id, standard.id, person.context]
+  );
+  res.status(201).json({ assessmentId: rows[0].id, status: "in_progress" });
 }
 
-// GET /api/assessments/:id — без авторизации, поэтому ПДн (ФИО/email)
-// здесь намеренно не отдаём: их видит только ревьюер через /report.
+// GET /api/assessments/:id — статус своей проверки.
 async function getAssessment(req, res) {
-  const assessmentId = Number(req.params.id);
+  const own = await loadOwnAssessment(req, res, "id, standard_id");
+  if (!own) return;
   const { rows } = await db.query(
     `SELECT a.id, a.status, a.context, a.created_at, s.code as standard_code, s.title as standard_title
      FROM assessments a
      JOIN standards s ON s.id = a.standard_id
      WHERE a.id = $1`,
-    [assessmentId]
+    [own.id]
   );
-  const assessment = rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
-  res.json(assessment);
+  res.json(rows[0]);
 }
 
 // GET /api/assessments/:id/quiz — случайная выборка из банка вопросов
 // (см. ensureQuizAssignment), без правильных ответов, с вариантами в
 // перемешанном для этой проверки порядке.
 async function getQuiz(req, res) {
-  const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query(
-    "SELECT id, standard_id, quiz_assignment FROM assessments WHERE id = $1",
-    [assessmentId]
-  );
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
+  const assessment = await loadOwnAssessment(req, res, "id, standard_id, quiz_assignment");
+  if (!assessment) return;
   const assignment = await ensureQuizAssignment(assessment);
 
   const { rows } = await db.query("SELECT id, text, options FROM quiz_questions WHERE id = ANY($1)", [
@@ -137,17 +122,12 @@ async function getQuiz(req, res) {
 // relative to the shuffled options this assessment was shown; translated
 // back to the question's canonical option order before scoring/storing.
 async function submitQuizResponses(req, res) {
-  const assessmentId = Number(req.params.id);
+  const assessment = await loadOwnAssessment(req, res, "id, quiz_assignment");
+  if (!assessment) return;
+  const assessmentId = assessment.id;
   const { responses } = req.body || {};
   if (!Array.isArray(responses) || responses.length === 0) {
     res.status(400).json({ error: "responses обязателен и должен быть непустым массивом" });
-    return;
-  }
-
-  const assessmentResult = await db.query("SELECT id, quiz_assignment FROM assessments WHERE id = $1", [assessmentId]);
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
   const optionOrderByQuestion = new Map((assessment.quiz_assignment || []).map((a) => [a.questionId, a.optionOrder]));
@@ -179,16 +159,8 @@ async function submitQuizResponses(req, res) {
 // GET /api/assessments/:id/practical-task — случайная выборка из банка
 // заданий (см. ensureTaskAssignment).
 async function getPracticalTask(req, res) {
-  const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query(
-    "SELECT id, standard_id, task_assignment FROM assessments WHERE id = $1",
-    [assessmentId]
-  );
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
+  const assessment = await loadOwnAssessment(req, res, "id, standard_id, task_assignment");
+  if (!assessment) return;
   const taskIds = await ensureTaskAssignment(assessment);
 
   const { rows } = await db.query("SELECT id, prompt FROM practical_tasks WHERE id = ANY($1)", [taskIds]);
@@ -202,20 +174,12 @@ async function getPracticalTask(req, res) {
 // task in the standard's whole bank) has a submission. Quiz is required
 // first; self-assessment is optional and doesn't gate completion.
 async function submitPracticalSubmission(req, res) {
-  const assessmentId = Number(req.params.id);
+  const assessment = await loadOwnAssessment(req, res, "id, standard_id, task_assignment");
+  if (!assessment) return;
+  const assessmentId = assessment.id;
   const { taskId, submissionText } = req.body || {};
   if (!taskId || !submissionText) {
     res.status(400).json({ error: "taskId и submissionText обязательны" });
-    return;
-  }
-
-  const assessmentResult = await db.query(
-    "SELECT id, standard_id, task_assignment FROM assessments WHERE id = $1",
-    [assessmentId]
-  );
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
   const assignedTaskIds = await ensureTaskAssignment(assessment);
@@ -245,13 +209,8 @@ async function submitPracticalSubmission(req, res) {
 
 // GET /api/assessments/:id/self-assessment — пункты для оценки, сгруппированные по ТФ
 async function getSelfAssessmentItems(req, res) {
-  const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query("SELECT standard_id FROM assessments WHERE id = $1", [assessmentId]);
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
+  const assessment = await loadOwnAssessment(req, res, "standard_id");
+  if (!assessment) return;
   const { rows } = await db.query(
     `SELECT ci.id, ci.kind, ci.text, lf.code as labor_function_code, lf.title as labor_function_title
      FROM competency_items ci
@@ -269,16 +228,12 @@ async function getSelfAssessmentItems(req, res) {
 // Self-assessment is optional and informational only — it does not gate or
 // set the assessment's completion status (see submitPracticalSubmission).
 async function submitSelfAssessment(req, res) {
-  const assessmentId = Number(req.params.id);
+  const assessment = await loadOwnAssessment(req, res, "id");
+  if (!assessment) return;
+  const assessmentId = assessment.id;
   const { ratings } = req.body || {};
   if (!Array.isArray(ratings) || ratings.length === 0) {
     res.status(400).json({ error: "ratings обязателен и должен быть непустым массивом" });
-    return;
-  }
-
-  const assessmentResult = await db.query("SELECT id FROM assessments WHERE id = $1", [assessmentId]);
-  if (!assessmentResult.rows[0]) {
-    res.status(404).json({ error: "Проверка не найдена" });
     return;
   }
 

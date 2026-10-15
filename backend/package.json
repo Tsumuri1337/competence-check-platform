@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "migrate": "node src/migrate.js",
     "seed": "node src/seed.js",
+    "index-competences": "node src/index-competences.js",
     "test": "node --test"
   },
   "engines": {

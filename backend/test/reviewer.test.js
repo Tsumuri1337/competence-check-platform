@@ -1,6 +1,15 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { startTestServer, uniqueEmail, loginReviewer, cleanupAssessment, cleanupPerson, pool } = require("../test-support/helpers");
+const {
+  startTestServer,
+  uniqueEmail,
+  loginReviewer,
+  registerParticipant,
+  fetchAs,
+  cleanupAssessment,
+  cleanupPerson,
+  pool,
+} = require("../test-support/helpers");
 
 let server, baseUrl, cookie;
 
@@ -8,25 +17,26 @@ let server, baseUrl, cookie;
 // context, возвращает { assessmentId, taskSubmissionIds }.
 async function completeAssessment(context, emailPrefix) {
   const email = uniqueEmail(emailPrefix);
-  const start = await fetch(`${baseUrl}/api/assessments`, {
+  const api = fetchAs((await registerParticipant(baseUrl, { email, context, fullName: "Ревью Тестович" })).cookie);
+  const start = await api(`${baseUrl}/api/assessments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ standardCode: "06.032", context, person: { fullName: "Ревью Тестович", email } }),
+    body: JSON.stringify({ standardCode: "06.032" }),
   }).then((r) => r.json());
   const assessmentId = start.assessmentId;
 
-  const quiz = await fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz`).then((r) => r.json());
+  const quiz = await api(`${baseUrl}/api/assessments/${assessmentId}/quiz`).then((r) => r.json());
   const responses = quiz.map((q) => ({ questionId: q.id, selectedIndex: 0 }));
-  await fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz-responses`, {
+  await api(`${baseUrl}/api/assessments/${assessmentId}/quiz-responses`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ responses }),
   });
 
-  const tasks = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-task`).then((r) => r.json());
+  const tasks = await api(`${baseUrl}/api/assessments/${assessmentId}/practical-task`).then((r) => r.json());
   const submissionIds = [];
   for (const t of tasks) {
-    const res = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-submission`, {
+    const res = await api(`${baseUrl}/api/assessments/${assessmentId}/practical-submission`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId: t.id, submissionText: "Ответ ревью-теста." }),

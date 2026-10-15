@@ -1,13 +1,7 @@
 const db = require("../db");
 const { hashPassword, verifyPassword, generateSessionToken, hashToken, validatePasswordStrength, MAX_PASSWORD_LENGTH } = require("../lib/auth");
 const { setSessionCookie, clearSessionCookie, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } = require("../lib/cookies");
-
-// Блокировка перебора пароля: после стольких неудач за окно вход по этому
-// email (или с этого IP) отвечает 429. Ключ по email считается и для
-// несуществующих адресов, чтобы блокировка не выдавала, есть ли такой ревьюер.
-const WINDOW_MINUTES = 15;
-const MAX_FAILS_PER_EMAIL = 5;
-const MAX_FAILS_PER_IP = 30;
+const { throttleKeys, rejectIfLockedOut, recordFailure, clearFailures } = require("../lib/loginThrottle");
 
 // Хэш для сравнения, когда ревьюера с таким email нет: без этого ответ на
 // неизвестный email заметно быстрее (scrypt не считается) и по времени видно,
@@ -32,14 +26,6 @@ async function resolveReviewerFromSession(req) {
   return rows[0] || null;
 }
 
-async function recentFailures(key) {
-  const { rows } = await db.query(
-    `SELECT count(*) FROM login_attempts WHERE key = $1 AND at > now() - make_interval(mins => $2)`,
-    [key, WINDOW_MINUTES]
-  );
-  return Number(rows[0].count);
-}
-
 // POST /api/auth/login  body: { email, password }
 async function login(req, res) {
   const { email, password } = req.body || {};
@@ -48,26 +34,19 @@ async function login(req, res) {
     return;
   }
 
-  const emailKey = `email:${email.trim().toLowerCase()}`;
-  const ipKey = `ip:${req.ip}`;
-  const [emailFails, ipFails] = await Promise.all([recentFailures(emailKey), recentFailures(ipKey)]);
-  if (emailFails >= MAX_FAILS_PER_EMAIL || ipFails >= MAX_FAILS_PER_IP) {
-    res.set("Retry-After", String(WINDOW_MINUTES * 60));
-    res.status(429).json({ error: `Слишком много неудачных попыток входа. Повторите через ${WINDOW_MINUTES} минут.` });
-    return;
-  }
+  const keys = throttleKeys("email:", email, req.ip);
+  if (await rejectIfLockedOut(res, keys)) return;
 
   const { rows } = await db.query("SELECT * FROM reviewers WHERE email = $1", [email.trim()]);
   const reviewer = rows[0];
   const ok = verifyPassword(password, reviewer ? reviewer.password_hash : DUMMY_HASH) && Boolean(reviewer);
   if (!ok) {
-    await db.query("INSERT INTO login_attempts (key) VALUES ($1), ($2)", [emailKey, ipKey]);
+    await recordFailure(keys);
     res.status(401).json({ error: "Неверный email или пароль" });
     return;
   }
 
-  // Успешный вход сбрасывает счётчик по этому email; заодно чистим старые записи.
-  await db.query("DELETE FROM login_attempts WHERE key = $1 OR at < now() - interval '1 day'", [emailKey]);
+  await clearFailures(keys);
   await db.query("DELETE FROM reviewer_sessions WHERE expires_at < now()");
 
   const token = generateSessionToken();
