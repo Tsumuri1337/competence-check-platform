@@ -140,12 +140,30 @@ class AiSummaryError extends Error {
   }
 }
 
-async function generateAiSummary(assessmentId, reviewerId) {
+async function loadReadyInput(assessmentId) {
   const input = await gatherInput(assessmentId);
   if (!input) throw new AiSummaryError("Проверка не найдена", 404);
   if (!input.score || input.score.total === null) {
     throw new AiSummaryError("Резюме доступно после того, как кандидат отправит тест", 409);
   }
+  return input;
+}
+
+// Оценка полноты — только для реально отправленных заданий и в пределах 0–100.
+async function saveSummary(assessmentId, reviewerId, model, content, input) {
+  const submitted = new Set(input.tasks.map((t) => t.task_id));
+  content.practicalAssessments = content.practicalAssessments
+    .filter((p) => submitted.has(p.taskId))
+    .map((p) => ({ ...p, fullness: Math.max(0, Math.min(100, Math.round(p.fullness))) }));
+  const { rows } = await db.query(
+    "INSERT INTO ai_summaries (assessment_id, reviewer_id, model, content) VALUES ($1, $2, $3, $4) RETURNING id, created_at",
+    [assessmentId, reviewerId, model, JSON.stringify(content)]
+  );
+  return { id: rows[0].id, createdAt: rows[0].created_at, model, content };
+}
+
+async function generateAiSummary(assessmentId, reviewerId) {
+  const input = await loadReadyInput(assessmentId);
 
   let response;
   try {
@@ -176,18 +194,98 @@ async function generateAiSummary(assessmentId, reviewerId) {
     throw new AiSummaryError("AI вернул неполный ответ — повторите попытку", 502);
   }
 
-  const content = response.parsed_output;
-  // Оценка полноты только для реально отправленных заданий и в пределах 0–100.
-  const submitted = new Set(input.tasks.map((t) => t.task_id));
-  content.practicalAssessments = content.practicalAssessments
-    .filter((p) => submitted.has(p.taskId))
-    .map((p) => ({ ...p, fullness: Math.max(0, Math.min(100, Math.round(p.fullness))) }));
+  return saveSummary(assessmentId, reviewerId, response.model || MODEL, response.parsed_output, input);
+}
 
-  const { rows } = await db.query(
-    "INSERT INTO ai_summaries (assessment_id, reviewer_id, model, content) VALUES ($1, $2, $3, $4) RETURNING id, created_at",
-    [assessmentId, reviewerId, response.model || MODEL, JSON.stringify(content)]
+// ===== Ручной режим: без API-ключа, через чат-ассистента ревьюера =====
+// Ревьюер копирует готовый запрос (те же обезличенные данные и правила, что
+// уходят в API), вставляет его в свой чат (Gemini, Claude и т.п.), а ответ
+// вставляет обратно. Схему ответа в чате не навязать, поэтому запрос
+// содержит шаблон JSON, а импорт терпим к обёрткам и форматам чисел — но
+// проверяет каждое поле той же схемой.
+
+const ANSWER_TEMPLATE = (taskIds) =>
+  JSON.stringify(
+    {
+      candidateProfile: "1–2 предложения: какой это специалист, на какой уровень и роль реально тянет",
+      summary: "связный абзац-резюме для ревьюера, 5–8 предложений",
+      strengths: [{ title: "сильная сторона", evidence: "на каких данных основан вывод" }],
+      weaknesses: [{ title: "слабая сторона или пробел", evidence: "на каких данных основан вывод" }],
+      practicalAssessments: (taskIds.length ? taskIds : [0]).map((id) => ({
+        taskId: id,
+        fullness: "целое 0–100: насколько полно ответ покрывает пункты рубрики",
+        covered: ["раскрытый пункт рубрики"],
+        missing: ["нераскрытый пункт рубрики"],
+      })),
+      recommendations: ["что проверить на собеседовании / чему учиться"],
+      riskFlags: ["настораживающий признак — или пустой массив"],
+    },
+    null,
+    2
   );
-  return { id: rows[0].id, createdAt: rows[0].created_at, model: response.model || MODEL, content };
+
+async function buildManualPrompt(assessmentId) {
+  const input = await loadReadyInput(assessmentId);
+  const taskIds = input.tasks.map((t) => t.task_id);
+  const prompt = `${SYSTEM_PROMPT}
+
+${buildUserMessage(input)}
+
+Формат ответа: верни ТОЛЬКО один JSON-объект строго по шаблону ниже — без пояснений до и после, без Markdown. Значения в шаблоне — описания полей, замени их своими. В practicalAssessments — ровно по одной записи на каждое задание, taskId не меняй${taskIds.length ? ` (${taskIds.join(", ")})` : ""}; fullness — число, не строка.
+${ANSWER_TEMPLATE(taskIds)}`;
+  return { prompt, taskIds };
+}
+
+// Терпимая схема для вставленного ответа: числа могут прийти строками,
+// необязательные списки — отсутствовать.
+const intLike = z.preprocess((v) => {
+  if (typeof v !== "string") return v;
+  const digits = v.replace(/[^\d.-]/g, ""); // «85%», « 85 » → 85; слово без цифр — ошибка, а не 0
+  return digits ? Number(digits) : NaN;
+}, z.number());
+const listOf = (item) => z.array(item).optional().default([]);
+const point = z.object({ title: z.string(), evidence: z.string().optional().default("") });
+const ImportSchema = z.object({
+  candidateProfile: z.string().min(1),
+  summary: z.string().min(1),
+  strengths: listOf(point),
+  weaknesses: listOf(point),
+  practicalAssessments: listOf(
+    z.object({ taskId: intLike, fullness: intLike, covered: listOf(z.string()), missing: listOf(z.string()) })
+  ),
+  recommendations: listOf(z.string()),
+  riskFlags: listOf(z.string()),
+});
+
+// Достаёт JSON из ответа чата: убирает ```json-ограждения и текст вокруг
+// первого '{' … последнего '}'.
+function extractJson(text) {
+  const unfenced = String(text).replace(/```(?:json)?/gi, "");
+  const start = unfenced.indexOf("{");
+  const end = unfenced.lastIndexOf("}");
+  if (start === -1 || end <= start) {
+    throw new AiSummaryError("В ответе не найден JSON — вставьте ответ ассистента целиком", 400);
+  }
+  try {
+    return JSON.parse(unfenced.slice(start, end + 1));
+  } catch (e) {
+    throw new AiSummaryError(`Ответ не разбирается как JSON (${e.message}) — попросите ассистента вернуть только JSON по шаблону`, 400);
+  }
+}
+
+const MAX_IMPORT_CHARS = 100000;
+
+async function importManualSummary(assessmentId, reviewerId, text, source) {
+  if (typeof text !== "string" || !text.trim()) throw new AiSummaryError("Вставьте ответ ассистента", 400);
+  if (text.length > MAX_IMPORT_CHARS) throw new AiSummaryError("Ответ слишком длинный", 400);
+  const input = await loadReadyInput(assessmentId);
+  const parsed = ImportSchema.safeParse(extractJson(text));
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    throw new AiSummaryError(`Ответ не соответствует шаблону: поле «${issue.path.join(".") || "корень"}» — ${issue.message}`, 400);
+  }
+  const label = `вставлено вручную${source ? `: ${String(source).trim().slice(0, 40)}` : ""}`;
+  return saveSummary(assessmentId, reviewerId, label, parsed.data, input);
 }
 
 async function latestAiSummary(assessmentId) {
@@ -199,4 +297,13 @@ async function latestAiSummary(assessmentId) {
   return { id: rows[0].id, model: rows[0].model, createdAt: rows[0].created_at, content: rows[0].content };
 }
 
-module.exports = { generateAiSummary, latestAiSummary, setClientFactoryForTests, AiSummaryError, SummarySchema, MODEL };
+module.exports = {
+  generateAiSummary,
+  buildManualPrompt,
+  importManualSummary,
+  latestAiSummary,
+  setClientFactoryForTests,
+  AiSummaryError,
+  SummarySchema,
+  MODEL,
+};

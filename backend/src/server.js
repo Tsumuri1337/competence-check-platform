@@ -21,6 +21,8 @@ const {
   rerunOsintForAssessment,
   reviewCertificate,
   createAiSummary,
+  getAiSummaryPrompt,
+  importAiSummary,
 } = require("./routes/reviewers");
 const { login, logout, me, changePassword } = require("./routes/auth");
 const people = require("./routes/people");
@@ -88,6 +90,8 @@ app.post("/api/assessments/:id/decision", setDecision);
 app.post("/api/assessments/:id/osint", rerunOsintForAssessment);
 app.post("/api/assessments/:id/certificates/:certId/review", reviewCertificate);
 app.post("/api/assessments/:id/ai-summary", createAiSummary);
+app.get("/api/assessments/:id/ai-summary/prompt", getAiSummaryPrompt);
+app.post("/api/assessments/:id/ai-summary/import", importAiSummary);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Маршрут не найден" });

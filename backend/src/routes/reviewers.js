@@ -5,7 +5,7 @@ const { decrypt } = require("../lib/pii");
 const { listCertificates, osintView } = require("./people");
 const { startOsintInBackground, latestRun } = require("../lib/osint");
 const { computeScore } = require("../lib/scoring");
-const { generateAiSummary, latestAiSummary, AiSummaryError } = require("../lib/aiSummary");
+const { generateAiSummary, buildManualPrompt, importManualSummary, latestAiSummary, AiSummaryError } = require("../lib/aiSummary");
 
 function decryptPerson(row) {
   return { ...row, full_name: decrypt(row.full_name), email: decrypt(row.email) };
@@ -300,7 +300,48 @@ async function createAiSummary(req, res) {
   }
 }
 
+// GET /api/assessments/:id/ai-summary/prompt — готовый обезличенный запрос
+// для ручного режима (копируется в чат-ассистента ревьюера).
+async function getAiSummaryPrompt(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  try {
+    const { prompt, taskIds } = await buildManualPrompt(assessmentId);
+    await logAccess(reviewer.id, assessmentId, "ai_summary_prompt");
+    res.json({ prompt, taskIds });
+  } catch (e) {
+    if (e instanceof AiSummaryError) {
+      res.status(e.status).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+}
+
+// POST /api/assessments/:id/ai-summary/import  body: { text, source? } —
+// ответ чат-ассистента, вставленный ревьюером.
+async function importAiSummary(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  const { text, source } = req.body || {};
+  try {
+    const summary = await importManualSummary(assessmentId, reviewer.id, text, source);
+    await logAccess(reviewer.id, assessmentId, "ai_summary_import");
+    res.status(201).json({ aiSummary: summary, score: await computeScore(assessmentId) });
+  } catch (e) {
+    if (e instanceof AiSummaryError) {
+      res.status(e.status).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+}
+
 module.exports = {
+  getAiSummaryPrompt,
+  importAiSummary,
   createAiSummary,
   listAssessments,
   getAssessmentReport,

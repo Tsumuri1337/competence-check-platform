@@ -246,3 +246,57 @@ test("AI summary errors: refusal -> 502, missing credentials -> 503, quiz not su
     setClientFactoryForTests(() => new Anthropic());
   }
 });
+
+test("manual AI mode: copy a pseudonymized prompt, paste a chat answer back (tolerant but validated)", async () => {
+  const fullName = "Ручной Режим Тестович";
+  const { email, cookie, assessmentId } = await newCandidate("score-manual", { fullName, phone: "+7 911 222-33-44" });
+  const promptUrl = `${baseUrl}/api/assessments/${assessmentId}/ai-summary/prompt`;
+  const importUrl = `${baseUrl}/api/assessments/${assessmentId}/ai-summary/import`;
+
+  assert.equal((await fetch(promptUrl)).status, 401);
+  assert.equal((await fetch(promptUrl, { headers: { Cookie: reviewerCookie } })).status, 409); // тест ещё не отправлен
+
+  await takeQuiz(cookie, assessmentId);
+  const submissions = await submitTasks(cookie, assessmentId);
+  const res = await fetch(promptUrl, { headers: { Cookie: reviewerCookie } });
+  assert.equal(res.status, 200);
+  const { prompt, taskIds } = await res.json();
+  assert.deepEqual([...taskIds].sort(), submissions.map((s) => s.taskId).sort());
+  for (const secret of [fullName, email, "222-33-44", "79112223344"]) assert.ok(!prompt.includes(secret), `PII in prompt: ${secret}`);
+  assert.match(prompt, /ТОЛЬКО один JSON-объект/);
+  assert.match(prompt, /<candidate_answer>/);
+  for (const id of taskIds) assert.match(prompt, new RegExp(`"taskId": ${id}`));
+
+  const post = (text, source) => fetch(importUrl, json(reviewerCookie, { text, source }));
+
+  // Как обычно отвечает чат: пояснение, ```json-ограждение, числа строками, нет riskFlags.
+  const chatAnswer = `Вот резюме:\n\`\`\`json\n${JSON.stringify({
+    candidateProfile: "Уверенный практик сетевой защиты.",
+    summary: "Тест пройден полностью, практические ответы содержательные.",
+    strengths: [{ title: "Сети", evidence: "все вопросы по сетям верны" }],
+    weaknesses: [{ title: "Документирование" }],
+    practicalAssessments: taskIds.map((id) => ({ taskId: String(id), fullness: "85%", covered: ["МЭ"], missing: [] })),
+    recommendations: ["Уточнить опыт с SIEM"],
+  })}\n\`\`\`\nНадеюсь, помог!`;
+  const ok = await post(chatAnswer, "Gemini");
+  assert.equal(ok.status, 201, await ok.clone().text());
+  const body = await ok.json();
+  assert.equal(body.aiSummary.model, "вставлено вручную: Gemini");
+  assert.deepEqual(body.aiSummary.content.riskFlags, []);
+  assert.deepEqual(body.aiSummary.content.practicalAssessments.map((p) => p.fullness), taskIds.map(() => 85));
+  const practical = body.score.components.find((c) => c.key === "practical");
+  assert.ok(practical.details.tasks.every((t) => t.source === "ai" && t.score === 85));
+
+  const bad = async (text, needle) => {
+    const r = await post(text);
+    assert.equal(r.status, 400);
+    assert.match((await r.json()).error, needle);
+  };
+  await bad("Извините, я не могу помочь с этим.", /не найден JSON/);
+  await bad("{ это не json }", /не разбирается/);
+  await bad(JSON.stringify({ candidateProfile: "x" }), /summary/);
+  await bad(
+    JSON.stringify({ candidateProfile: "x", summary: "y", practicalAssessments: [{ taskId: taskIds[0], fullness: "высокая" }] }),
+    /fullness/
+  );
+});
