@@ -170,3 +170,99 @@ CREATE TABLE IF NOT EXISTS access_log (
   action TEXT NOT NULL,   -- 'view_report' | 'score_submission'
   at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ===== Учётные записи проходящих проверку (кандидаты / сотрудники) =====
+-- Раньше кандидат не авторизовался и указывал ФИО/email при каждом старте.
+-- Теперь он регистрируется (ФИО, email, телефон, пароль) и проходит проверки
+-- из личного кабинета. Телефон и OSINT-никнейм — ПДн, хранятся зашифрованными,
+-- как ФИО и email (см. src/lib/pii.js).
+ALTER TABLE people ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE people ADD COLUMN IF NOT EXISTS osint_username TEXT;
+ALTER TABLE people ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE people ADD COLUMN IF NOT EXISTS osint_consent_at TIMESTAMPTZ;
+ALTER TABLE people ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+CREATE TABLE IF NOT EXISTS person_sessions (
+  id SERIAL PRIMARY KEY,
+  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,   -- sha256 токена из httpOnly-куки, как у reviewer_sessions
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- ===== Сертификаты и OSINT =====
+-- source='candidate' — кандидат сам указал сертификат (вендор + номер/ссылка);
+-- source='credly'    — бейдж найден OSINT-поиском в публичном профиле Credly.
+-- status:
+--   claimed        — заявлен, ещё не проверялся
+--   verified       — подтверждён (email получателя бейджа совпал / ревьюер подтвердил)
+--   probable       — совпало имя получателя, но не email — вероятно, но не точно
+--   owner_mismatch — сертификат существует, но выдан не этому человеку (по данным источника)
+--   not_found      — по ссылке/номеру ничего не найдено
+--   needs_manual   — у вендора нет открытого API, ревьюер проверяет по ссылке вручную
+--   rejected       — ревьюер отклонил
+CREATE TABLE IF NOT EXISTS certificates (
+  id SERIAL PRIMARY KEY,
+  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  source TEXT NOT NULL CHECK (source IN ('candidate', 'credly')),
+  catalog_id TEXT,                     -- id из content/certifications.json, если распознан
+  vendor TEXT NOT NULL,
+  name TEXT NOT NULL,
+  credential_id TEXT,
+  url TEXT,
+  external_id TEXT,                    -- id бейджа в Credly
+  issued_on DATE,
+  expires_on DATE,
+  status TEXT NOT NULL DEFAULT 'claimed'
+    CHECK (status IN ('claimed', 'verified', 'probable', 'owner_mismatch', 'not_found', 'needs_manual', 'rejected')),
+  status_detail TEXT,
+  reviewed_by INTEGER REFERENCES reviewers(id),
+  checked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS certificates_person_external ON certificates(person_id, external_id) WHERE external_id IS NOT NULL;
+
+-- Один запуск OSINT-поиска по человеку: Sherlock по никнеймам + Credly.
+CREATE TABLE IF NOT EXISTS osint_runs (
+  id SERIAL PRIMARY KEY,
+  person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  trigger TEXT NOT NULL,               -- 'registration' | 'profile_update' | 'candidate' | 'reviewer'
+  requested_by INTEGER REFERENCES reviewers(id),
+  status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'done', 'failed')),
+  usernames JSONB,                     -- какие никнеймы проверялись
+  sherlock_available BOOLEAN,
+  profiles JSONB,                      -- [{ username, site, url }] — найденные Sherlock'ом профили
+  credly JSONB,                        -- [{ slug, found, badgeCount, kept }] — что нашлось в Credly
+  error TEXT,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS osint_runs_person ON osint_runs(person_id, started_at DESC);
+
+-- ===== Тематический индекс требований =====
+-- Темы (VPN, ЛВС, криптография, ...) поверх пунктов знаний/умений всех
+-- профстандартов. Производные данные: seed.js пересобирает их из
+-- content/topics.json при каждом запуске (правила, а не ручная разметка).
+CREATE TABLE IF NOT EXISTS topics (
+  id SERIAL PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  category TEXT NOT NULL,
+  category_title TEXT NOT NULL,
+  title TEXT NOT NULL,
+  title_en TEXT,
+  description TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS competency_item_topics (
+  competency_item_id INTEGER NOT NULL REFERENCES competency_items(id) ON DELETE CASCADE,
+  topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  PRIMARY KEY (competency_item_id, topic_id)
+);
+CREATE INDEX IF NOT EXISTS competency_item_topics_topic ON competency_item_topics(topic_id);
+
+CREATE TABLE IF NOT EXISTS quiz_question_topics (
+  quiz_question_id INTEGER NOT NULL REFERENCES quiz_questions(id) ON DELETE CASCADE,
+  topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  PRIMARY KEY (quiz_question_id, topic_id)
+);
