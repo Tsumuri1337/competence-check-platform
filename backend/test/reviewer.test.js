@@ -1,6 +1,15 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { startTestServer, uniqueEmail, loginReviewer, cleanupAssessment, cleanupPerson, pool } = require("../test-support/helpers");
+const {
+  startTestServer,
+  uniqueEmail,
+  loginReviewer,
+  registerPerson,
+  startAssessment,
+  cleanupAssessment,
+  cleanupPerson,
+  pool,
+} = require("../test-support/helpers");
 
 let server, baseUrl, cookie;
 
@@ -8,27 +17,24 @@ let server, baseUrl, cookie;
 // context, возвращает { assessmentId, taskSubmissionIds }.
 async function completeAssessment(context, emailPrefix) {
   const email = uniqueEmail(emailPrefix);
-  const start = await fetch(`${baseUrl}/api/assessments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ standardCode: "06.032", context, person: { fullName: "Ревью Тестович", email } }),
-  }).then((r) => r.json());
-  const assessmentId = start.assessmentId;
+  const { cookie: personCookie } = await registerPerson(baseUrl, { email, fullName: "Ревью Тестович", context });
+  const assessmentId = await startAssessment(baseUrl, personCookie, "06.032");
+  const auth = { Cookie: personCookie };
 
-  const quiz = await fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz`).then((r) => r.json());
+  const quiz = await fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz`, { headers: auth }).then((r) => r.json());
   const responses = quiz.map((q) => ({ questionId: q.id, selectedIndex: 0 }));
   await fetch(`${baseUrl}/api/assessments/${assessmentId}/quiz-responses`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...auth },
     body: JSON.stringify({ responses }),
   });
 
-  const tasks = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-task`).then((r) => r.json());
+  const tasks = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-task`, { headers: auth }).then((r) => r.json());
   const submissionIds = [];
   for (const t of tasks) {
     const res = await fetch(`${baseUrl}/api/assessments/${assessmentId}/practical-submission`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...auth },
       body: JSON.stringify({ taskId: t.id, submissionText: "Ответ ревью-теста." }),
     }).then((r) => r.json());
     submissionIds.push(res.submissionId);
@@ -68,6 +74,10 @@ test("reviewer report shows the quiz score and unreviewed practical submissions"
   assert.ok(data.summary.quizPercent >= 0 && data.summary.quizPercent <= 100);
   assert.equal(data.summary.allPracticalReviewed, false);
   assert.equal(data.practicalSubmissions.length, 2);
+  // Разбивка теста по темам требований: у каждой темы correct <= total.
+  assert.ok(Array.isArray(data.topicBreakdown) && data.topicBreakdown.length > 0);
+  for (const t of data.topicBreakdown) assert.ok(t.correct <= t.total);
+  assert.ok(Array.isArray(data.certificates));
 });
 
 test("scoring a practical submission updates the report's summary", async () => {

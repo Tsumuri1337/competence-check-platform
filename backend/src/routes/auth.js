@@ -136,4 +136,15 @@ async function changePassword(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { login, logout, me, changePassword, resolveReviewerFromSession };
+module.exports = {
+  login,
+  logout,
+  me,
+  changePassword,
+  resolveReviewerFromSession,
+  // Общая защита от перебора — используется и входом кандидатов (routes/people.js).
+  recentFailures,
+  WINDOW_MINUTES,
+  MAX_FAILS_PER_EMAIL,
+  MAX_FAILS_PER_IP,
+};

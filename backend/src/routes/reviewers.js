@@ -2,6 +2,10 @@ const db = require("../db");
 const { logAccess } = require("../lib/accessLog");
 const { resolveReviewerFromSession } = require("./auth");
 const { decrypt } = require("../lib/pii");
+const { listCertificates, osintView } = require("./people");
+const { startOsintInBackground, latestRun } = require("../lib/osint");
+const { computeScore } = require("../lib/scoring");
+const { generateAiSummary, buildManualPrompt, importManualSummary, latestAiSummary, AiSummaryError } = require("../lib/aiSummary");
 
 function decryptPerson(row) {
   return { ...row, full_name: decrypt(row.full_name), email: decrypt(row.email) };
@@ -23,7 +27,8 @@ async function listAssessments(req, res) {
 
   const { standardCode, context, status } = req.query;
   let sql = `
-    SELECT a.id, a.status, a.context, a.decision, a.created_at, p.full_name, p.email, s.code as standard_code, s.title as standard_title
+    SELECT a.id, a.status, a.context, a.decision, a.created_at, p.full_name, p.email, s.code as standard_code, s.title as standard_title,
+      (SELECT count(*)::int FROM certificates c WHERE c.person_id = p.id AND c.status = 'verified') AS verified_certificates
     FROM assessments a
     JOIN people p ON p.id = a.person_id
     JOIN standards s ON s.id = a.standard_id
@@ -45,7 +50,17 @@ async function listAssessments(req, res) {
   sql += " ORDER BY a.created_at DESC";
 
   const { rows } = await db.query(sql, args);
-  res.json(rows.map(decryptPerson));
+  // Итоговый балл в списке — чтобы сортировать/сравнивать кандидатов, не
+  // открывая каждый отчёт.
+  const scores = await Promise.all(rows.map((r) => computeScore(r.id)));
+  res.json(
+    rows.map((r, i) => ({
+      ...decryptPerson(r),
+      score_total: scores[i] ? scores[i].total : null,
+      score_provisional: scores[i] ? scores[i].provisional : true,
+      score_grade: scores[i] && scores[i].grade ? scores[i].grade.title : null,
+    }))
+  );
 }
 
 // GET /api/assessments/:id/report — сводный отчёт: квиз + практическое
@@ -56,7 +71,8 @@ async function getAssessmentReport(req, res) {
 
   const assessmentId = Number(req.params.id);
   const assessmentResult = await db.query(
-    `SELECT a.id, a.status, a.context, a.decision, a.created_at, p.full_name, p.email, s.id as standard_id, s.code as standard_code, s.title as standard_title
+    `SELECT a.id, a.status, a.context, a.decision, a.created_at, p.id as person_id, p.full_name, p.email, p.phone, p.osint_username,
+       s.id as standard_id, s.code as standard_code, s.title as standard_title
      FROM assessments a
      JOIN people p ON p.id = a.person_id
      JOIN standards s ON s.id = a.standard_id
@@ -69,8 +85,10 @@ async function getAssessmentReport(req, res) {
     return;
   }
   const assessment = decryptPerson(assessmentRow);
+  assessment.phone = assessment.phone ? decrypt(assessment.phone) : null;
+  assessment.osint_username = assessment.osint_username ? decrypt(assessment.osint_username) : null;
 
-  const [quiz, submissions, ratings] = await Promise.all([
+  const [quiz, submissions, ratings, certificates, osintRun, topicBreakdown, score, aiSummary] = await Promise.all([
     db.query(
       `SELECT qr.question_id, qr.selected_index, qr.is_correct, qq.text
        FROM quiz_responses qr JOIN quiz_questions qq ON qq.id = qr.question_id
@@ -91,6 +109,22 @@ async function getAssessmentReport(req, res) {
        WHERE sar.assessment_id = $1 ORDER BY lf.code, ci.id`,
       [assessmentId]
     ),
+    listCertificates(assessment.person_id),
+    latestRun(assessment.person_id),
+    // Результат теста по темам требований (VPN, сети, криптография, ...) —
+    // показывает, в каких областях пробелы, а не только общий процент.
+    db.query(
+      `SELECT t.slug, t.title, t.category_title, count(*)::int AS total, count(*) FILTER (WHERE qr.is_correct)::int AS correct
+       FROM quiz_responses qr
+       JOIN quiz_question_topics qt ON qt.quiz_question_id = qr.question_id
+       JOIN topics t ON t.id = qt.topic_id
+       WHERE qr.assessment_id = $1
+       GROUP BY t.slug, t.title, t.category_title, t.sort_order
+       ORDER BY t.sort_order`,
+      [assessmentId]
+    ),
+    computeScore(assessmentId),
+    latestAiSummary(assessmentId),
   ]);
 
   await logAccess(reviewer.id, assessmentId, "view_report");
@@ -119,6 +153,11 @@ async function getAssessmentReport(req, res) {
     practicalSubmissions: submissions.rows,
     selfAssessment: ratings.rows,
     summary,
+    certificates,
+    osint: osintView(osintRun),
+    topicBreakdown: topicBreakdown.rows,
+    score,
+    aiSummary,
   });
 }
 
@@ -182,4 +221,132 @@ async function scorePracticalSubmission(req, res) {
   res.json({ submissionId, score, notes: notes || null });
 }
 
-module.exports = { listAssessments, getAssessmentReport, scorePracticalSubmission, setDecision };
+async function personIdForAssessment(assessmentId) {
+  const { rows } = await db.query("SELECT person_id FROM assessments WHERE id = $1", [assessmentId]);
+  return rows[0] ? rows[0].person_id : null;
+}
+
+// POST /api/assessments/:id/osint — ревьюер перезапускает OSINT-поиск по
+// человеку этой проверки (например, после того как кандидат дал никнейм).
+async function rerunOsintForAssessment(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  const personId = await personIdForAssessment(assessmentId);
+  if (!personId) {
+    res.status(404).json({ error: "Проверка не найдена" });
+    return;
+  }
+  const running = await db.query("SELECT 1 FROM osint_runs WHERE person_id = $1 AND status = 'running' LIMIT 1", [personId]);
+  if (running.rows[0]) {
+    res.status(409).json({ error: "Поиск по этому человеку уже идёт" });
+    return;
+  }
+  startOsintInBackground(personId, { trigger: "reviewer", reviewerId: reviewer.id });
+  await logAccess(reviewer.id, assessmentId, "run_osint");
+  res.status(202).json({ ok: true });
+}
+
+// POST /api/assessments/:id/certificates/:certId/review
+// body: { status: 'verified' | 'rejected', note? } — ручное решение ревьюера
+// (для вендоров без открытого API, «probable» и спорных бейджей). Повторный
+// OSINT это решение не перетирает (см. reviewed_by в lib/osint).
+async function reviewCertificate(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  const { status, note } = req.body || {};
+  if (!["verified", "rejected"].includes(status)) {
+    res.status(400).json({ error: "status должен быть verified | rejected" });
+    return;
+  }
+  const personId = await personIdForAssessment(assessmentId);
+  const { rowCount } = await db.query(
+    `UPDATE certificates SET status = $1, status_detail = $2, reviewed_by = $3, checked_at = now()
+     WHERE id = $4 AND person_id = $5`,
+    [
+      status,
+      `${status === "verified" ? "Подтверждён" : "Отклонён"} ревьюером ${reviewer.email}${note ? `: ${String(note).slice(0, 300)}` : ""}`,
+      reviewer.id,
+      Number(req.params.certId),
+      personId,
+    ]
+  );
+  if (!rowCount) {
+    res.status(404).json({ error: "Сертификат не найден" });
+    return;
+  }
+  await logAccess(reviewer.id, assessmentId, "review_certificate");
+  res.json({ ok: true, status });
+}
+
+// POST /api/assessments/:id/ai-summary — сформировать AI-резюме кандидата
+// (Claude; занимает до минуты). Каждый вызов — платный запрос к API, поэтому
+// только по кнопке ревьюера, а не автоматически.
+async function createAiSummary(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  try {
+    const summary = await generateAiSummary(assessmentId, reviewer.id);
+    await logAccess(reviewer.id, assessmentId, "ai_summary");
+    res.status(201).json({ aiSummary: summary, score: await computeScore(assessmentId) });
+  } catch (e) {
+    if (e instanceof AiSummaryError) {
+      res.status(e.status).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+}
+
+// GET /api/assessments/:id/ai-summary/prompt — готовый обезличенный запрос
+// для ручного режима (копируется в чат-ассистента ревьюера).
+async function getAiSummaryPrompt(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  try {
+    const { prompt, taskIds } = await buildManualPrompt(assessmentId);
+    await logAccess(reviewer.id, assessmentId, "ai_summary_prompt");
+    res.json({ prompt, taskIds });
+  } catch (e) {
+    if (e instanceof AiSummaryError) {
+      res.status(e.status).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+}
+
+// POST /api/assessments/:id/ai-summary/import  body: { text, source? } —
+// ответ чат-ассистента, вставленный ревьюером.
+async function importAiSummary(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  const { text, source } = req.body || {};
+  try {
+    const summary = await importManualSummary(assessmentId, reviewer.id, text, source);
+    await logAccess(reviewer.id, assessmentId, "ai_summary_import");
+    res.status(201).json({ aiSummary: summary, score: await computeScore(assessmentId) });
+  } catch (e) {
+    if (e instanceof AiSummaryError) {
+      res.status(e.status).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+}
+
+module.exports = {
+  getAiSummaryPrompt,
+  importAiSummary,
+  createAiSummary,
+  listAssessments,
+  getAssessmentReport,
+  scorePracticalSubmission,
+  setDecision,
+  rerunOsintForAssessment,
+  reviewCertificate,
+};

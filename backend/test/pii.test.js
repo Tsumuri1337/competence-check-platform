@@ -4,13 +4,15 @@ const {
   startTestServer,
   uniqueEmail,
   loginReviewer,
+  registerPerson,
+  startAssessment,
   cleanupAssessment,
   cleanupPerson,
   pool,
 } = require("../test-support/helpers");
 const { encrypt, decrypt, emailBlindIndex } = require("../src/lib/pii");
 
-let server, baseUrl, cookie;
+let server, baseUrl, cookie, personCookie;
 const email = uniqueEmail("pii");
 const fullName = "Шифров Тест Тестович";
 const assessmentIds = [];
@@ -18,6 +20,7 @@ const assessmentIds = [];
 test.before(async () => {
   ({ server, baseUrl } = await startTestServer());
   ({ cookie } = await loginReviewer(baseUrl));
+  ({ cookie: personCookie } = await registerPerson(baseUrl, { email, fullName, phone: "+7 (912) 555-00-11" }));
 });
 
 test.after(async () => {
@@ -29,12 +32,7 @@ test.after(async () => {
 });
 
 async function start() {
-  const res = await fetch(`${baseUrl}/api/assessments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ standardCode: "06.030", context: "candidate", person: { fullName, email } }),
-  });
-  const { assessmentId } = await res.json();
+  const assessmentId = await startAssessment(baseUrl, personCookie);
   assessmentIds.push(assessmentId);
   return assessmentId;
 }
@@ -60,20 +58,23 @@ test("blind index ignores case and surrounding whitespace", () => {
   assert.equal(emailBlindIndex(" User@Example.RU "), emailBlindIndex("user@example.ru"));
 });
 
-test("name and email are stored encrypted in the database, not as plaintext", async () => {
+test("name, email and phone are stored encrypted in the database, not as plaintext", async () => {
   const id = await start();
   const { rows } = await pool.query(
-    "SELECT p.full_name, p.email FROM assessments a JOIN people p ON p.id = a.person_id WHERE a.id = $1",
+    "SELECT p.full_name, p.email, p.phone, p.password_hash FROM assessments a JOIN people p ON p.id = a.person_id WHERE a.id = $1",
     [id]
   );
   assert.ok(rows[0].full_name.startsWith("enc:v1:"));
   assert.ok(rows[0].email.startsWith("enc:v1:"));
+  assert.ok(rows[0].phone.startsWith("enc:v1:"));
+  assert.ok(!rows[0].phone.includes("555"));
+  assert.ok(!rows[0].password_hash.includes("test-password"));
   assert.ok(!rows[0].full_name.includes("Шифров"));
   assert.ok(!rows[0].email.includes(email));
 });
 
-test("the same email reuses one person row despite random-IV ciphertext", async () => {
-  await start();
+test("registering the same email twice is refused despite random-IV ciphertext", async () => {
+  await assert.rejects(registerPerson(baseUrl, { email: email.toUpperCase(), fullName }), /409/);
   const { rows } = await pool.query("SELECT count(*) FROM people WHERE email_hash = $1", [emailBlindIndex(email)]);
   assert.equal(rows[0].count, "1");
 });
@@ -84,10 +85,11 @@ test("reviewer report returns decrypted name and email", async () => {
   const data = await res.json();
   assert.equal(data.assessment.full_name, fullName);
   assert.equal(data.assessment.email, email);
+  assert.equal(data.assessment.phone, "+79125550011");
 });
 
-test("the unauthenticated assessment status endpoint does not leak PII", async () => {
-  const res = await fetch(`${baseUrl}/api/assessments/${assessmentIds[0]}`);
+test("the assessment status endpoint does not leak PII", async () => {
+  const res = await fetch(`${baseUrl}/api/assessments/${assessmentIds[0]}`, { headers: { Cookie: personCookie } });
   const data = await res.json();
   assert.equal("full_name" in data, false);
   assert.equal("email" in data, false);

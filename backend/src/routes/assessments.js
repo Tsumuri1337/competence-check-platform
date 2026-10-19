@@ -1,5 +1,5 @@
 const db = require("../db");
-const { encrypt, emailBlindIndex } = require("../lib/pii");
+const { requirePerson } = require("./people");
 
 // Каждая проверка получает случайную выборку из общего банка вопросов/
 // заданий — выбирается один раз и сохраняется в assessments.quiz_assignment
@@ -17,12 +17,31 @@ function shuffle(array) {
   return result;
 }
 
+// Проверка принадлежит вошедшему кандидату/сотруднику — раньше любой, кто
+// знал id, мог читать вопросы и отправлять ответы за другого человека.
+// Чужая проверка отвечает 404 (а не 403), чтобы не подтверждать её существование.
+async function loadOwnedAssessment(req, res, columns) {
+  const person = await requirePerson(req, res);
+  if (!person) return null;
+  const { rows } = await db.query(`SELECT ${columns}, person_id FROM assessments WHERE id = $1`, [Number(req.params.id)]);
+  const assessment = rows[0];
+  if (!assessment || assessment.person_id !== person.id) {
+    res.status(404).json({ error: "Проверка не найдена" });
+    return null;
+  }
+  return assessment;
+}
+
 async function ensureQuizAssignment(assessment) {
   if (assessment.quiz_assignment) return assessment.quiz_assignment;
   const { rows } = await db.query("SELECT id FROM quiz_questions WHERE standard_id = $1", [assessment.standard_id]);
   const questionIds = shuffle(rows.map((r) => r.id)).slice(0, QUIZ_SIZE);
   const assignment = questionIds.map((questionId) => ({ questionId, optionOrder: shuffle([0, 1, 2, 3]) }));
-  await db.query("UPDATE assessments SET quiz_assignment = $1 WHERE id = $2", [JSON.stringify(assignment), assessment.id]);
+  // quiz_started_at — верхняя граница суммарного времени ответов (см. submitQuizResponses).
+  await db.query("UPDATE assessments SET quiz_assignment = $1, quiz_started_at = now() WHERE id = $2", [
+    JSON.stringify(assignment),
+    assessment.id,
+  ]);
   return assignment;
 }
 
@@ -34,17 +53,15 @@ async function ensureTaskAssignment(assessment) {
   return assignment;
 }
 
-// POST /api/assessments
-// body: { standardCode, context: 'employee'|'candidate', person: { fullName, email, organizationName? } }
+// POST /api/assessments  body: { standardCode }
+// Человек и контекст (кандидат/сотрудник) берутся из сессии личного
+// кабинета (routes/people.js), а не из тела запроса.
 async function startAssessment(req, res) {
-  const { standardCode, context, person } = req.body || {};
-
-  if (!standardCode || !context || !person || !person.fullName || !person.email) {
-    res.status(400).json({ error: "standardCode, context и person.{fullName,email} обязательны" });
-    return;
-  }
-  if (!["employee", "candidate"].includes(context)) {
-    res.status(400).json({ error: "context должен быть employee | candidate" });
+  const person = await requirePerson(req, res);
+  if (!person) return;
+  const { standardCode } = req.body || {};
+  if (!standardCode) {
+    res.status(400).json({ error: "standardCode обязателен" });
     return;
   }
 
@@ -55,69 +72,34 @@ async function startAssessment(req, res) {
     return;
   }
 
-  const assessmentId = await db.transaction(async (client) => {
-    let organizationId = null;
-    if (person.organizationName) {
-      const orgResult = await client.query("SELECT id FROM organizations WHERE name = $1", [person.organizationName]);
-      organizationId = orgResult.rows[0]
-        ? orgResult.rows[0].id
-        : (await client.query("INSERT INTO organizations (name) VALUES ($1) RETURNING id", [person.organizationName])).rows[0].id;
-    }
-
-    const emailHash = emailBlindIndex(person.email);
-    const existingPerson = await client.query("SELECT id FROM people WHERE email_hash = $1", [emailHash]);
-    const personId = existingPerson.rows[0]
-      ? existingPerson.rows[0].id
-      : (
-          await client.query(
-            "INSERT INTO people (full_name, email, email_hash, context, organization_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-            [encrypt(person.fullName), encrypt(person.email), emailHash, context, organizationId]
-          )
-        ).rows[0].id;
-
-    const appResult = await client.query(
-      "INSERT INTO assessments (person_id, standard_id, context) VALUES ($1, $2, $3) RETURNING id",
-      [personId, standard.id, context]
-    );
-    return appResult.rows[0].id;
-  });
-
-  res.status(201).json({ assessmentId, status: "in_progress" });
+  const { rows } = await db.query(
+    "INSERT INTO assessments (person_id, standard_id, context) VALUES ($1, $2, $3) RETURNING id",
+    [person.id, standard.id, person.context]
+  );
+  res.status(201).json({ assessmentId: rows[0].id, status: "in_progress" });
 }
 
-// GET /api/assessments/:id — без авторизации, поэтому ПДн (ФИО/email)
-// здесь намеренно не отдаём: их видит только ревьюер через /report.
+// GET /api/assessments/:id — статус своей проверки (ПДн здесь не отдаются,
+// профиль — в /api/people/me, полный отчёт — у ревьюера в /report).
 async function getAssessment(req, res) {
-  const assessmentId = Number(req.params.id);
+  const owned = await loadOwnedAssessment(req, res, "id");
+  if (!owned) return;
   const { rows } = await db.query(
     `SELECT a.id, a.status, a.context, a.created_at, s.code as standard_code, s.title as standard_title
      FROM assessments a
      JOIN standards s ON s.id = a.standard_id
      WHERE a.id = $1`,
-    [assessmentId]
+    [owned.id]
   );
-  const assessment = rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
-  res.json(assessment);
+  res.json(rows[0]);
 }
 
 // GET /api/assessments/:id/quiz — случайная выборка из банка вопросов
 // (см. ensureQuizAssignment), без правильных ответов, с вариантами в
 // перемешанном для этой проверки порядке.
 async function getQuiz(req, res) {
-  const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query(
-    "SELECT id, standard_id, quiz_assignment FROM assessments WHERE id = $1",
-    [assessmentId]
-  );
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
+  const assessment = await loadOwnedAssessment(req, res, "id, standard_id, quiz_assignment");
+  if (!assessment) return;
   const assignment = await ensureQuizAssignment(assessment);
 
   const { rows } = await db.query("SELECT id, text, options FROM quiz_questions WHERE id = ANY($1)", [
@@ -132,10 +114,30 @@ async function getQuiz(req, res) {
   res.json(result);
 }
 
+// Время ответа приходит от клиента (сколько вопрос был на экране), поэтому
+// сервер его ограничивает: не больше MAX_ANSWER_MS на вопрос, а сумма — не
+// больше реально прошедшего с выдачи теста (иначе пропорционально ужимается).
+const MAX_ANSWER_MS = 10 * 60 * 1000;
+
+function sanitizeTimes(responses, startedAt) {
+  const times = responses.map((r) =>
+    Number.isFinite(r.timeMs) && r.timeMs >= 0 ? Math.min(Math.round(r.timeMs), MAX_ANSWER_MS) : null
+  );
+  const known = times.filter((t) => t !== null);
+  if (!known.length || !startedAt) return times;
+  const elapsed = Date.now() - new Date(startedAt).getTime() + 5000;
+  const sum = known.reduce((a, b) => a + b, 0);
+  if (sum <= elapsed) return times;
+  const k = elapsed / sum;
+  return times.map((t) => (t === null ? null : Math.round(t * k)));
+}
+
 // POST /api/assessments/:id/quiz-responses
-// body: { responses: [{ questionId, selectedIndex }] } — selectedIndex is
+// body: { responses: [{ questionId, selectedIndex, timeMs? }] } — selectedIndex is
 // relative to the shuffled options this assessment was shown; translated
 // back to the question's canonical option order before scoring/storing.
+// Отправить ответы можно один раз: результат кандидат видит сразу, и
+// повторная отправка позволила бы «исправить» неверные ответы.
 async function submitQuizResponses(req, res) {
   const assessmentId = Number(req.params.id);
   const { responses } = req.body || {};
@@ -144,17 +146,21 @@ async function submitQuizResponses(req, res) {
     return;
   }
 
-  const assessmentResult = await db.query("SELECT id, quiz_assignment FROM assessments WHERE id = $1", [assessmentId]);
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
+  const assessment = await loadOwnedAssessment(req, res, "id, quiz_assignment, quiz_started_at, quiz_submitted_at");
+  if (!assessment) return;
+  if (assessment.quiz_submitted_at) {
+    res.status(409).json({ error: "Ответы теста уже отправлены — изменить их нельзя" });
     return;
   }
+  const times = sanitizeTimes(responses, assessment.quiz_started_at);
   const optionOrderByQuestion = new Map((assessment.quiz_assignment || []).map((a) => [a.questionId, a.optionOrder]));
 
   const score = await db.transaction(async (client) => {
+    // Блокировка строки — две одновременные отправки не пройдут обе.
+    const locked = await client.query("SELECT quiz_submitted_at FROM assessments WHERE id = $1 FOR UPDATE", [assessmentId]);
+    if (locked.rows[0].quiz_submitted_at) return null;
     let correctCount = 0;
-    for (const r of responses) {
+    for (const [i, r] of responses.entries()) {
       const optionOrder = optionOrderByQuestion.get(r.questionId);
       if (!optionOrder) continue; // вопрос не входит в выборку этой проверки
       const canonicalIndex = optionOrder[r.selectedIndex];
@@ -164,14 +170,19 @@ async function submitQuizResponses(req, res) {
       const isCorrect = question.correct_index === canonicalIndex;
       if (isCorrect) correctCount += 1;
       await client.query(
-        `INSERT INTO quiz_responses (assessment_id, question_id, selected_index, is_correct)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (assessment_id, question_id) DO UPDATE SET selected_index = $3, is_correct = $4`,
-        [assessmentId, r.questionId, canonicalIndex, isCorrect]
+        `INSERT INTO quiz_responses (assessment_id, question_id, selected_index, is_correct, time_ms)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (assessment_id, question_id) DO UPDATE SET selected_index = $3, is_correct = $4, time_ms = $5`,
+        [assessmentId, r.questionId, canonicalIndex, isCorrect, times[i]]
       );
     }
+    await client.query("UPDATE assessments SET quiz_submitted_at = now() WHERE id = $1", [assessmentId]);
     return { correctCount, total: responses.length };
   });
+  if (!score) {
+    res.status(409).json({ error: "Ответы теста уже отправлены — изменить их нельзя" });
+    return;
+  }
 
   res.json({ assessmentId, ...score });
 }
@@ -179,16 +190,8 @@ async function submitQuizResponses(req, res) {
 // GET /api/assessments/:id/practical-task — случайная выборка из банка
 // заданий (см. ensureTaskAssignment).
 async function getPracticalTask(req, res) {
-  const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query(
-    "SELECT id, standard_id, task_assignment FROM assessments WHERE id = $1",
-    [assessmentId]
-  );
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
+  const assessment = await loadOwnedAssessment(req, res, "id, standard_id, task_assignment");
+  if (!assessment) return;
   const taskIds = await ensureTaskAssignment(assessment);
 
   const { rows } = await db.query("SELECT id, prompt FROM practical_tasks WHERE id = ANY($1)", [taskIds]);
@@ -209,16 +212,17 @@ async function submitPracticalSubmission(req, res) {
     return;
   }
 
-  const assessmentResult = await db.query(
-    "SELECT id, standard_id, task_assignment FROM assessments WHERE id = $1",
-    [assessmentId]
+  const assessment = await loadOwnedAssessment(req, res, "id, standard_id, task_assignment");
+  if (!assessment) return;
+  const assignedTaskIds = await ensureTaskAssignment(assessment);
+  const reviewed = await db.query(
+    "SELECT 1 FROM practical_submissions WHERE assessment_id = $1 AND task_id = $2 AND reviewer_score IS NOT NULL",
+    [assessmentId, taskId]
   );
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
+  if (reviewed.rows[0]) {
+    res.status(409).json({ error: "Решение уже оценено ревьюером — изменить его нельзя" });
     return;
   }
-  const assignedTaskIds = await ensureTaskAssignment(assessment);
 
   const submissionId = await db.transaction(async (client) => {
     const inserted = await client.query(
@@ -245,13 +249,8 @@ async function submitPracticalSubmission(req, res) {
 
 // GET /api/assessments/:id/self-assessment — пункты для оценки, сгруппированные по ТФ
 async function getSelfAssessmentItems(req, res) {
-  const assessmentId = Number(req.params.id);
-  const assessmentResult = await db.query("SELECT standard_id FROM assessments WHERE id = $1", [assessmentId]);
-  const assessment = assessmentResult.rows[0];
-  if (!assessment) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
+  const assessment = await loadOwnedAssessment(req, res, "standard_id");
+  if (!assessment) return;
   const { rows } = await db.query(
     `SELECT ci.id, ci.kind, ci.text, lf.code as labor_function_code, lf.title as labor_function_title
      FROM competency_items ci
@@ -276,11 +275,8 @@ async function submitSelfAssessment(req, res) {
     return;
   }
 
-  const assessmentResult = await db.query("SELECT id FROM assessments WHERE id = $1", [assessmentId]);
-  if (!assessmentResult.rows[0]) {
-    res.status(404).json({ error: "Проверка не найдена" });
-    return;
-  }
+  const assessment = await loadOwnedAssessment(req, res, "id");
+  if (!assessment) return;
 
   await db.transaction(async (client) => {
     for (const r of ratings) {

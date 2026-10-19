@@ -13,8 +13,20 @@ const {
   getSelfAssessmentItems,
   submitSelfAssessment,
 } = require("./routes/assessments");
-const { listAssessments, getAssessmentReport, scorePracticalSubmission, setDecision } = require("./routes/reviewers");
+const {
+  listAssessments,
+  getAssessmentReport,
+  scorePracticalSubmission,
+  setDecision,
+  rerunOsintForAssessment,
+  reviewCertificate,
+  createAiSummary,
+  getAiSummaryPrompt,
+  importAiSummary,
+} = require("./routes/reviewers");
 const { login, logout, me, changePassword } = require("./routes/auth");
+const people = require("./routes/people");
+const requirements = require("./routes/requirements");
 const { parseCookies } = require("./lib/cookies");
 
 const PORT = process.env.PORT || 3001;
@@ -32,16 +44,36 @@ app.use((req, res, next) => {
 // Раздаём обе страницы напрямую из корня проекта — временное решение для
 // локального просмотра, пока нет отдельного фронтенд-проекта.
 const PROJECT_ROOT = path.join(__dirname, "..", "..");
-app.get("/test_flow.html", (req, res) => res.sendFile(path.join(PROJECT_ROOT, "test_flow.html")));
-app.get("/reviewer_dashboard.html", (req, res) => res.sendFile(path.join(PROJECT_ROOT, "reviewer_dashboard.html")));
+const PAGES = ["index.html", "test_flow.html", "reviewer_dashboard.html", "requirements.html"];
+for (const page of PAGES) app.get(`/${page}`, (req, res) => res.sendFile(path.join(PROJECT_ROOT, page)));
+app.get("/", (req, res) => res.sendFile(path.join(PROJECT_ROOT, "index.html")));
 
 app.post("/api/auth/login", login);
 app.post("/api/auth/logout", logout);
 app.get("/api/auth/me", me);
 app.post("/api/auth/change-password", changePassword);
 
+// Личный кабинет кандидата/сотрудника.
+app.post("/api/people/register", people.register);
+app.post("/api/people/login", people.login);
+app.post("/api/people/logout", people.logout);
+app.get("/api/people/me", people.me);
+app.patch("/api/people/me", people.updateProfile);
+app.post("/api/people/me/certificates", people.addCertificate);
+app.delete("/api/people/me/certificates/:certId", people.deleteCertificate);
+app.post("/api/people/me/osint", people.rerunOsint);
+
 app.get("/api/standards", listStandards);
 app.get("/api/standards/:code", getStandardByCode);
+app.get("/api/standards/:code/topics", requirements.getStandardTopicIndex);
+
+// Справочник требований (вкладка «Требования»).
+app.get("/api/topics", requirements.listTopics);
+app.get("/api/topics/:slug", requirements.getTopic);
+app.get("/api/labor-functions/:id", requirements.getLaborFunction);
+app.get("/api/competency-items/:id", requirements.getCompetencyItem);
+app.get("/api/requirements/search", requirements.search);
+app.get("/api/certifications", requirements.listCertifications);
 
 app.post("/api/assessments", startAssessment);
 app.get("/api/assessments", listAssessments);
@@ -55,6 +87,11 @@ app.post("/api/assessments/:id/self-assessment", submitSelfAssessment);
 app.get("/api/assessments/:id/report", getAssessmentReport);
 app.post("/api/assessments/:assessmentId/practical-submissions/:submissionId/score", scorePracticalSubmission);
 app.post("/api/assessments/:id/decision", setDecision);
+app.post("/api/assessments/:id/osint", rerunOsintForAssessment);
+app.post("/api/assessments/:id/certificates/:certId/review", reviewCertificate);
+app.post("/api/assessments/:id/ai-summary", createAiSummary);
+app.get("/api/assessments/:id/ai-summary/prompt", getAiSummaryPrompt);
+app.post("/api/assessments/:id/ai-summary/import", importAiSummary);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Маршрут не найден" });

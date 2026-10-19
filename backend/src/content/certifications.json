@@ -1,0 +1,112 @@
+{
+  "_comment": "Каталог вендорских сертификатов ИБ. verify.type: 'credly' — вендор выдаёт бейджи Credly, проверяется автоматически по профилю/ссылке на бейдж; 'manual' — открытого API нет, ревьюер проверяет на странице вендора (verify.url) по номеру сертификата. credlyPattern — регулярка по названию бейджа Credly для автоматического распознавания. topics — slug'и из topics.json: какие темы требований подкрепляет сертификат.",
+  "vendors": [
+    {
+      "slug": "cisco",
+      "title": "Cisco",
+      "credlyIssuer": "Cisco",
+      "verify": { "type": "credly", "url": "https://cp.certmetrics.com/cisco/en/public/verify/credential", "hint": "Бейдж Credly или Verification Number в Cisco CertMetrics" }
+    },
+    {
+      "slug": "huawei",
+      "title": "Huawei",
+      "credlyIssuer": null,
+      "verify": { "type": "manual", "url": "https://e.huawei.com/en/talent/cert/#/careerCert", "hint": "Номер сертификата Huawei Talent (HCIA/HCIP/HCIE) — проверяется на портале Huawei" }
+    },
+    {
+      "slug": "comptia",
+      "title": "CompTIA",
+      "credlyIssuer": "CompTIA",
+      "verify": { "type": "credly", "url": "https://cp.certmetrics.com/comptia/en/public/verify/credential", "hint": "Бейдж Credly или Verification Code в CompTIA CertMetrics" }
+    },
+    {
+      "slug": "isc2",
+      "title": "ISC2",
+      "credlyIssuer": "ISC2",
+      "verify": { "type": "credly", "url": "https://www.isc2.org/MemberVerification", "hint": "Бейдж Credly или Member ID на isc2.org" }
+    },
+    {
+      "slug": "aws",
+      "title": "Amazon Web Services",
+      "credlyIssuer": "Amazon Web Services",
+      "verify": { "type": "credly", "url": "https://aws.amazon.com/verification", "hint": "Бейдж Credly или Validation Number на aws.amazon.com/verification" }
+    },
+    {
+      "slug": "microsoft",
+      "title": "Microsoft",
+      "credlyIssuer": null,
+      "verify": { "type": "manual", "url": "https://learn.microsoft.com/users/me/transcript", "hint": "Ссылка «Share» на транскрипт или сертификат в Microsoft Learn" }
+    },
+    {
+      "slug": "google-cloud",
+      "title": "Google Cloud",
+      "credlyIssuer": "Google Cloud",
+      "verify": { "type": "credly", "url": "https://www.credly.com/organizations/google-cloud/badges", "hint": "Бейдж Credly (Google Cloud выдаёт сертификаты через Credly)" }
+    },
+    {
+      "slug": "offsec",
+      "title": "OffSec",
+      "credlyIssuer": "OffSec",
+      "verify": { "type": "credly", "url": "https://www.credly.com/organizations/offsec/badges", "hint": "Бейдж Credly (OffSec выдаёт сертификаты через Credly)" }
+    },
+    {
+      "slug": "ec-council",
+      "title": "EC-Council",
+      "credlyIssuer": "EC-Council",
+      "verify": { "type": "manual", "url": "https://aspen.eccouncil.org/VerifyBadge", "hint": "Certification Number на портале EC-Council Aspen" }
+    },
+    {
+      "slug": "hackthebox",
+      "title": "Hack The Box",
+      "credlyIssuer": null,
+      "verify": { "type": "manual", "url": "https://www.hackthebox.com/certificates", "hint": "Ссылка на сертификат HTB Academy (CPTS, CBBH, CDSA …) и профиль HTB" }
+    }
+  ],
+  "certifications": [
+    { "id": "cisco-ccna", "vendor": "cisco", "name": "CCNA", "level": "associate", "credlyPattern": "\\bCCNA\\b(?!:)|Cisco Certified Network Associate", "topics": ["networks", "lan", "vpn", "firewall", "access-control", "telecom"] },
+    { "id": "cisco-cyberops-associate", "vendor": "cisco", "name": "CyberOps Associate", "level": "associate", "credlyPattern": "CyberOps Associate", "topics": ["monitoring", "incidents", "attacks", "networks", "forensics", "malware"] },
+    { "id": "cisco-ccnp-security", "vendor": "cisco", "name": "CCNP Security", "level": "professional", "credlyPattern": "CCNP Security", "topics": ["firewall", "vpn", "access-control", "networks", "crypto", "monitoring"] },
+    { "id": "cisco-ccnp-enterprise", "vendor": "cisco", "name": "CCNP Enterprise", "level": "professional", "credlyPattern": "CCNP Enterprise", "topics": ["networks", "lan", "vpn", "telecom"] },
+    { "id": "cisco-ccie-security", "vendor": "cisco", "name": "CCIE Security", "level": "expert", "credlyPattern": "CCIE Security", "topics": ["firewall", "vpn", "access-control", "networks", "crypto", "monitoring", "architecture"] },
+
+    { "id": "huawei-hcia-security", "vendor": "huawei", "name": "HCIA-Security", "level": "associate", "credlyPattern": null, "topics": ["firewall", "vpn", "networks", "access-control", "crypto"] },
+    { "id": "huawei-hcip-security", "vendor": "huawei", "name": "HCIP-Security", "level": "professional", "credlyPattern": null, "topics": ["firewall", "vpn", "networks", "access-control", "monitoring", "attacks"] },
+    { "id": "huawei-hcie-security", "vendor": "huawei", "name": "HCIE-Security", "level": "expert", "credlyPattern": null, "topics": ["firewall", "vpn", "networks", "architecture", "monitoring", "incidents"] },
+    { "id": "huawei-hcia-datacom", "vendor": "huawei", "name": "HCIA-Datacom", "level": "associate", "credlyPattern": null, "topics": ["networks", "lan", "telecom"] },
+    { "id": "huawei-hcip-datacom", "vendor": "huawei", "name": "HCIP-Datacom", "level": "professional", "credlyPattern": null, "topics": ["networks", "lan", "vpn", "telecom"] },
+
+    { "id": "comptia-network-plus", "vendor": "comptia", "name": "Network+", "level": "associate", "credlyPattern": "Network\\+", "topics": ["networks", "lan", "telecom"] },
+    { "id": "comptia-security-plus", "vendor": "comptia", "name": "Security+", "level": "associate", "credlyPattern": "Security\\+", "topics": ["attacks", "vulnerabilities", "crypto", "pki", "access-control", "incidents", "risk", "policies"] },
+    { "id": "comptia-cysa-plus", "vendor": "comptia", "name": "CySA+", "level": "professional", "credlyPattern": "CySA\\+|Cybersecurity Analyst", "topics": ["monitoring", "vulnerabilities", "incidents", "attacks", "forensics"] },
+    { "id": "comptia-pentest-plus", "vendor": "comptia", "name": "PenTest+", "level": "professional", "credlyPattern": "PenTest\\+", "topics": ["vulnerabilities", "attacks", "networks", "secure-dev"] },
+    { "id": "comptia-securityx", "vendor": "comptia", "name": "SecurityX (CASP+)", "level": "expert", "credlyPattern": "SecurityX|CASP\\+|Advanced Security Practitioner", "topics": ["architecture", "risk", "crypto", "pki", "virtualization-cloud", "incidents"] },
+
+    { "id": "isc2-cc", "vendor": "isc2", "name": "CC — Certified in Cybersecurity", "level": "entry", "credlyPattern": "Certified in Cybersecurity", "topics": ["policies", "access-control", "networks", "incidents", "risk"] },
+    { "id": "isc2-sscp", "vendor": "isc2", "name": "SSCP", "level": "associate", "credlyPattern": "\\bSSCP\\b|Systems Security Certified Practitioner", "topics": ["access-control", "crypto", "networks", "monitoring", "incidents", "risk"] },
+    { "id": "isc2-cissp", "vendor": "isc2", "name": "CISSP", "level": "expert", "credlyPattern": "\\bCISSP\\b|Certified Information Systems Security Professional", "topics": ["risk", "policies", "architecture", "access-control", "crypto", "networks", "secure-dev", "incidents", "law"] },
+    { "id": "isc2-ccsp", "vendor": "isc2", "name": "CCSP", "level": "expert", "credlyPattern": "\\bCCSP\\b|Certified Cloud Security Professional", "topics": ["virtualization-cloud", "architecture", "crypto", "databases", "risk", "law"] },
+
+    { "id": "aws-security-specialty", "vendor": "aws", "name": "AWS Certified Security – Specialty", "level": "specialty", "credlyPattern": "AWS Certified Security", "topics": ["virtualization-cloud", "access-control", "crypto", "monitoring", "incidents", "networks"] },
+    { "id": "aws-solutions-architect", "vendor": "aws", "name": "AWS Certified Solutions Architect", "level": "associate", "credlyPattern": "AWS Certified Solutions Architect", "topics": ["virtualization-cloud", "architecture", "networks", "databases"] },
+    { "id": "aws-cloud-practitioner", "vendor": "aws", "name": "AWS Certified Cloud Practitioner", "level": "entry", "credlyPattern": "AWS Certified Cloud Practitioner", "topics": ["virtualization-cloud"] },
+
+    { "id": "ms-az-500", "vendor": "microsoft", "name": "Azure Security Engineer (AZ-500)", "level": "associate", "credlyPattern": null, "topics": ["virtualization-cloud", "access-control", "networks", "monitoring", "crypto"] },
+    { "id": "ms-sc-200", "vendor": "microsoft", "name": "Security Operations Analyst (SC-200)", "level": "associate", "credlyPattern": null, "topics": ["monitoring", "incidents", "attacks", "forensics"] },
+    { "id": "ms-sc-100", "vendor": "microsoft", "name": "Cybersecurity Architect Expert (SC-100)", "level": "expert", "credlyPattern": null, "topics": ["architecture", "risk", "access-control", "virtualization-cloud"] },
+
+    { "id": "gcp-security-engineer", "vendor": "google-cloud", "name": "Professional Cloud Security Engineer", "level": "professional", "credlyPattern": "Cloud Security Engineer", "topics": ["virtualization-cloud", "access-control", "networks", "crypto", "monitoring"] },
+    { "id": "gcp-network-engineer", "vendor": "google-cloud", "name": "Professional Cloud Network Engineer", "level": "professional", "credlyPattern": "Cloud Network Engineer", "topics": ["virtualization-cloud", "networks", "vpn", "firewall"] },
+
+    { "id": "offsec-oscp", "vendor": "offsec", "name": "OSCP — OffSec Certified Professional", "level": "professional", "credlyPattern": "\\bOSCP\\b|OffSec Certified Professional|PEN-200", "topics": ["vulnerabilities", "attacks", "networks", "os"] },
+    { "id": "offsec-oswe", "vendor": "offsec", "name": "OSWE — OffSec Web Expert", "level": "expert", "credlyPattern": "\\bOSWE\\b|OffSec Web Expert|WEB-300", "topics": ["secure-dev", "vulnerabilities", "testing"] },
+    { "id": "offsec-osda", "vendor": "offsec", "name": "OSDA — OffSec Defense Analyst", "level": "professional", "credlyPattern": "\\bOSDA\\b|Defense Analyst|SOC-200", "topics": ["monitoring", "incidents", "attacks"] },
+
+    { "id": "ec-ceh", "vendor": "ec-council", "name": "CEH — Certified Ethical Hacker", "level": "associate", "credlyPattern": "Certified Ethical Hacker|\\bCEH\\b", "topics": ["attacks", "vulnerabilities", "malware", "networks"] },
+    { "id": "ec-chfi", "vendor": "ec-council", "name": "CHFI — Computer Hacking Forensic Investigator", "level": "professional", "credlyPattern": "Forensic Investigator|\\bCHFI\\b", "topics": ["forensics", "incidents", "media"] },
+    { "id": "ec-csa", "vendor": "ec-council", "name": "CSA — Certified SOC Analyst", "level": "associate", "credlyPattern": "Certified SOC Analyst", "topics": ["monitoring", "incidents"] },
+
+    { "id": "htb-cpts", "vendor": "hackthebox", "name": "HTB CPTS — Penetration Testing Specialist", "level": "professional", "credlyPattern": null, "topics": ["vulnerabilities", "attacks", "networks", "os"] },
+    { "id": "htb-cdsa", "vendor": "hackthebox", "name": "HTB CDSA — Defensive Security Analyst", "level": "professional", "credlyPattern": null, "topics": ["monitoring", "incidents", "forensics"] },
+    { "id": "htb-cbbh", "vendor": "hackthebox", "name": "HTB CBBH — Bug Bounty Hunter", "level": "professional", "credlyPattern": null, "topics": ["secure-dev", "vulnerabilities"] }
+  ]
+}

@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:," />
+<title>Требования к должностям</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --ink-soft:#666f7a;
+    --paper:#F6F4EF;
+    --surface:#FFFFFF;
+    --line:#E1DDD3;
+    --line-strong:#C9C3B5;
+    --primary:#2C3E50;
+    --primary-soft:#eef1f4;
+    --accent:#B8863D;
+    --accent-soft:#F6ECDA;
+    --success:#4F7942;
+    --success-soft:#EAF1E6;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;}
+  .shell{max-width:1080px;margin:0 auto;padding:48px 28px 100px;}
+  @media (max-width:600px){.shell{padding:32px 16px 80px;}}
+
+  .topnav{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:24px;}
+  .topnav a{color:var(--ink-soft);text-decoration:none;padding-bottom:4px;border-bottom:2px solid transparent;}
+  .topnav a:hover{color:var(--primary);}
+  .topnav a.current{color:var(--primary);font-weight:600;border-bottom-color:var(--accent);}
+
+  .doc-head{border-bottom:2px solid var(--primary);padding-bottom:22px;margin-bottom:24px;}
+  .doc-eyebrow{font-size:12.5px;color:var(--ink-soft);letter-spacing:.04em;margin-bottom:8px;text-transform:uppercase;}
+  .doc-title{font-size:28px;font-weight:700;margin:0 0 6px;color:var(--primary);}
+  .doc-sub{font-size:14.5px;color:var(--ink-soft);margin:0;max-width:70ch;}
+
+  .explain{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:28px;}
+  @media (max-width:800px){.explain{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  .explain-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;font-size:12.5px;color:var(--ink-soft);}
+  .explain-item b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px;}
+  .explain-item .arrow{color:var(--accent);font-weight:700;}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:22px;overflow-x:auto;}
+  .tab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:14px;font-family:inherit;cursor:pointer;color:var(--ink-soft);margin-bottom:-1px;white-space:nowrap;}
+  .tab.active{color:var(--primary);font-weight:600;border-bottom-color:var(--accent);}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 3px rgba(27,36,48,.04);}
+  @media (max-width:600px){.card{padding:18px 16px;}}
+  .card-title{font-size:18px;font-weight:600;margin:0 0 4px;}
+  .card-sub{font-size:13px;color:var(--ink-soft);margin:0 0 16px;}
+  .section-title{font-size:14px;font-weight:600;margin:22px 0 10px;}
+  .section-title:first-child{margin-top:0;}
+
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .pill{border:1.5px solid var(--line-strong);border-radius:999px;padding:7px 14px;font-size:13px;background:#fff;cursor:pointer;font-family:inherit;color:var(--ink);}
+  .pill.selected{border-color:var(--accent);background:var(--accent-soft);color:#5c3f11;font-weight:600;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);text-decoration:none;cursor:pointer;font-family:inherit;}
+  .chip:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .chip .n{color:var(--ink-soft);margin-left:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .chip.test-only{border-style:dashed;}
+  .chip.cert{background:var(--success-soft);border-color:#cfdcc8;}
+
+  .cat{margin-bottom:20px;}
+  .cat-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600;margin-bottom:8px;}
+  .topic-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(80px,1fr) auto;gap:14px;align-items:center;padding:9px 12px;border-radius:var(--radius);cursor:pointer;text-decoration:none;color:inherit;}
+  .topic-row:hover{background:var(--primary-soft);}
+  .topic-name{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;}
+  .topic-name small{color:var(--ink-soft);font-weight:400;margin-left:6px;}
+  .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;}
+  .bar span{display:block;height:100%;background:var(--primary);}
+  .topic-count{font-size:12px;color:var(--ink-soft);white-space:nowrap;font-family:'IBM Plex Mono',monospace;}
+  @media (max-width:600px){
+    .topic-row{grid-template-columns:minmax(0,1fr) auto;}
+    .topic-row .bar{display:none;}
+  }
+
+  .crumbs{font-size:12px;color:var(--ink-soft);margin-bottom:8px;}
+  .crumbs a{color:var(--primary);cursor:pointer;}
+  .kind{font-size:10px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;margin-right:8px;white-space:nowrap;}
+  .kind.knowledge{background:var(--primary-soft);color:var(--primary);}
+  .kind.skill{background:var(--accent-soft);color:#5c3f11;}
+  .item{display:flex;gap:6px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;cursor:pointer;}
+  .item:first-child{border-top:none;}
+  .item:hover .item-text{color:var(--primary);text-decoration:underline;}
+  .item .shared{font-size:11px;color:var(--success);margin-left:6px;white-space:nowrap;}
+  .lf-block{border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;margin-bottom:10px;}
+  .lf-head{display:flex;gap:10px;align-items:baseline;cursor:pointer;}
+  .lf-head:hover .lf-title{text-decoration:underline;}
+  .lf-code{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .lf-title{font-size:14px;font-weight:600;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  @media (max-width:760px){.cols{grid-template-columns:1fr;}}
+  .stat-row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 4px;}
+  .stat{background:var(--primary-soft);border-radius:var(--radius);padding:8px 12px;font-size:12px;color:var(--ink-soft);}
+  .stat b{color:var(--primary);font-size:15px;margin-right:4px;}
+
+  .search-row{display:flex;gap:10px;margin-bottom:18px;}
+  .search-row input{flex:1;min-width:0;border:1px solid var(--line-strong);border-radius:var(--radius);padding:11px 13px;font-size:14px;font-family:inherit;}
+  .search-row input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .btn{background:var(--primary);color:#fff;border:none;padding:11px 22px;border-radius:var(--radius);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;}
+
+  table.certs{width:100%;border-collapse:collapse;font-size:13px;}
+  table.certs td, table.certs th{text-align:left;padding:9px 8px;border-top:1px solid var(--line);vertical-align:top;}
+  table.certs th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-top:none;}
+  table.certs td a{color:var(--primary);}
+  @media (max-width:700px){
+    table.certs thead{display:none;}
+    table.certs tr{display:block;border-top:1px solid var(--line);padding:8px 0;}
+    table.certs td{display:block;border:none;padding:3px 0;}
+  }
+
+  .muted{font-size:13px;color:var(--ink-soft);}
+  .banner{padding:12px 15px;border-radius:var(--radius);font-size:13px;margin-bottom:18px;background:#F7EAEA;color:#A23E3E;border:1px solid #A23E3E;}
+  .hidden{display:none !important;}
+  .note{margin-top:28px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <nav class="topnav">
+    <a href="index.html">Главная</a>
+    <a href="test_flow.html">Личный кабинет</a>
+    <a href="requirements.html" class="current">Требования</a>
+    <a href="reviewer_dashboard.html">Панель ревьюера</a>
+  </nav>
+
+  <div class="doc-head">
+    <div class="doc-eyebrow">Справочник</div>
+    <h1 class="doc-title">Требования к должностям</h1>
+    <p class="doc-sub">Что нужно знать и уметь по каждому из пяти профстандартов ИБ — по должности, по теме (VPN, сети, криптография…), по компетенции или отдельному навыку.</p>
+  </div>
+
+  <div class="explain">
+    <div class="explain-item"><b>Должность</b>Профессиональный стандарт Минтруда, например 06.032 <span class="arrow">→</span></div>
+    <div class="explain-item"><b>Компетенция</b>Трудовая функция (ТФ): что специалист способен выполнять на работе <span class="arrow">→</span></div>
+    <div class="explain-item"><b>Знания и умения</b>Знание — что нужно знать (теория). Умение (навык) — что нужно уметь делать. Умение опирается на знания своей компетенции.</div>
+    <div class="explain-item"><b>Темы</b>VPN, ЛВС, криптография… Сквозные области: одна тема нужна во многих компетенциях и должностях.</div>
+  </div>
+
+  <div class="banner hidden" id="error"></div>
+
+  <div class="tabs">
+    <button type="button" class="tab" data-view="standard">По должности</button>
+    <button type="button" class="tab" data-view="topic">По теме</button>
+    <button type="button" class="tab" data-view="search">Поиск навыка / компетенции</button>
+    <button type="button" class="tab" data-view="certs">Сертификаты</button>
+  </div>
+
+  <div id="view"></div>
+
+  <div class="note">
+    Компетенции, знания и умения — дословно из действующих профстандартов Минтруда России.
+    Темы присвоены автоматически по правилам (ключевым словам) — пункт может относиться к нескольким темам;
+    небольшая часть общих пунктов («сущность информационной безопасности» и т.п.) темы не имеет.
+    Соответствие сертификатов темам — экспертная оценка, а не часть стандарта.
+  </div>
+</div>
+
+<script>
+  const API_BASE = location.protocol.startsWith("http") ? "" : "http://localhost:3001";
+  const view = document.getElementById("view");
+  const errorEl = document.getElementById("error");
+  let standards = [];
+  let topics = [];
+
+  function esc(v){
+    return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  async function api(path){
+    const res = await fetch(`${API_BASE}${path}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Ошибка ${res.status}`);
+    return data;
+  }
+  function showError(msg){ errorEl.textContent = msg; errorEl.classList.remove("hidden"); }
+
+  // Навигация через hash: #standard=06.030, #topic=vpn[&standard=..], #lf=12, #item=345, #search=vpn, #certs
+  function parseHash(){
+    const params = new URLSearchParams(location.hash.slice(1));
+    return Object.fromEntries(params.entries());
+  }
+  function go(params){
+    const h = new URLSearchParams(params).toString();
+    if (location.hash.slice(1) === h) route(); else location.hash = h;
+  }
+  function setTab(name){
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === name));
+  }
+  document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+    const v = t.dataset.view;
+    if (v === "standard") go({ standard: (standards[0] || {}).code || "" });
+    else if (v === "topic") go({ topic: "" });
+    else if (v === "search") go({ search: "" });
+    else go({ certs: "" });
+  }));
+
+  // Делегирование кликов по ссылкам внутри видов.
+  view.addEventListener("click", e => {
+    const el = e.target.closest("[data-go]");
+    if (!el) return;
+    e.preventDefault();
+    go(JSON.parse(el.dataset.go));
+  });
+  const link = (params) => `data-go='${esc(JSON.stringify(params))}'`;
+
+  const KIND = { knowledge: "знание", skill: "умение" };
+  const kindBadge = (k) => `<span class="kind ${k}">${KIND[k]}</span>`;
+  const certChips = (certs) => certs.length
+    ? `<div class="chips">${certs.map(c => `<span class="chip cert" title="${esc(c.verify.hint)}">${esc(c.vendorTitle)} ${esc(c.name)}</span>`).join("")}</div>`
+    : '<div class="muted">Нет сертификатов в каталоге по этим темам.</div>';
+  const topicChips = (list, extra = {}) => `<div class="chips">${list.map(t =>
+    `<a class="chip ${t.testOnly ? "test-only" : ""}" href="#" ${link({ topic: t.slug, ...extra })} ${t.testOnly ? 'title="Есть в тесте, но не названа в профстандартах"' : ""}>${esc(t.title)}${t.testOnly ? '<span class="n">только в тесте</span>' : t.count ? `<span class="n">${t.count}</span>` : ""}</a>`).join("")}</div>`;
+  // Тема, по которой есть вопросы теста, но нет ни одного пункта стандартов
+  // (облака, антифрод): стандарты эти технологии прямо не называют.
+  const isTestOnly = (t) => t && t.itemCount === 0 && t.questionCount > 0;
+
+  function itemRow(i){
+    return `<div class="item" ${link({ item: i.id })}>${kindBadge(i.kind)}<span class="item-text">${esc(i.text)}</span>${i.sharedTopics && i.sharedTopics.length ? `<span class="shared">общие темы: ${esc(i.sharedTopics.join(", "))}</span>` : ""}</div>`;
+  }
+
+  // ----- По должности -----
+  async function renderStandard(code){
+    setTab("standard");
+    code = code || (standards[0] || {}).code;
+    const [index, tree] = await Promise.all([api(`/api/standards/${encodeURIComponent(code)}/topics`), api(`/api/standards/${encodeURIComponent(code)}`)]);
+    const max = Math.max(1, ...index.categories.flatMap(c => c.topics.map(t => t.knowledge + t.skills)));
+    const lfCount = tree.generalizedFunctions.reduce((n, gf) => n + gf.laborFunctions.length, 0);
+    view.innerHTML = `
+      <div class="pills">${standards.map(s => `<button type="button" class="pill ${s.code === code ? "selected" : ""}" ${link({ standard: s.code })}>${esc(s.code)}</button>`).join("")}</div>
+      <div class="card">
+        <h2 class="card-title">${esc(index.code)} — ${esc(index.title)}</h2>
+        <div class="stat-row">
+          <div class="stat"><b>${tree.generalizedFunctions.length}</b>обобщённых функций</div>
+          <div class="stat"><b>${lfCount}</b>компетенций (ТФ)</div>
+          <div class="stat"><b>${index.totalItems}</b>знаний и умений</div>
+          <div class="stat"><b>${index.categories.reduce((n, c) => n + c.topics.length, 0)}</b>тем</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title">Что нужно знать: индекс тем</h2>
+        <p class="card-sub">Сколько пунктов стандарта относится к теме. Нажмите на тему — откроются конкретные компетенции, знания и умения.</p>
+        ${index.categories.map(cat => `
+          <div class="cat">
+            <div class="cat-title">${esc(cat.title)}</div>
+            ${cat.topics.map(t => `
+              <a class="topic-row" href="#" ${link({ topic: t.slug, standard: code })}>
+                <span class="topic-name">${esc(t.title)}${t.titleEn ? `<small>${esc(t.titleEn)}</small>` : ""}</span>
+                <span class="bar"><span style="width:${Math.round((t.knowledge + t.skills) / max * 100)}%"></span></span>
+                <span class="topic-count">${t.knowledge} зн · ${t.skills} ум · ${t.laborFunctions.length} ТФ</span>
+              </a>`).join("")}
+          </div>`).join("")}
+        ${index.untaggedItems ? `<div class="muted">Без темы: ${index.untaggedItems} общих пунктов из ${index.totalItems}.</div>` : ""}
+      </div>
+      <div class="card">
+        <h2 class="card-title">Сертификаты, подкрепляющие эти темы</h2>
+        <p class="card-sub">Вендорские сертификаты, чьи темы чаще всего встречаются в этой должности.</p>
+        ${certChips(index.certifications)}
+      </div>
+      <div class="card">
+        <h2 class="card-title">Компетенции должности</h2>
+        <p class="card-sub">Обобщённые трудовые функции и входящие в них компетенции (ТФ).</p>
+        ${tree.generalizedFunctions.map(gf => `
+          <div class="section-title">${esc(gf.code)}. ${esc(gf.title)} <span class="muted">· уровень квалификации ${gf.qualificationLevel}</span></div>
+          ${gf.laborFunctions.map(lf => `
+            <div class="lf-block"><div class="lf-head" ${link({ lf: lf.id })}>
+              <span class="lf-code">${esc(lf.code)}</span><span class="lf-title">${esc(lf.title)}</span>
+            </div><div class="muted" style="margin-top:4px;">${lf.knowledge.length} знаний · ${lf.skills.length} умений</div></div>`).join("")}`).join("")}
+      </div>`;
+  }
+
+  // ----- По теме -----
+  async function renderTopic(slug, standardFilter){
+    setTab("topic");
+    const grouped = new Map();
+    for (const t of topics) {
+      if (!grouped.has(t.categoryTitle)) grouped.set(t.categoryTitle, []);
+      grouped.get(t.categoryTitle).push(t);
+    }
+    const list = `
+      <div class="card">
+        <h2 class="card-title">Все темы</h2>
+        <p class="card-sub">Число — сколько знаний и умений по теме во всех пяти стандартах. «Только в тесте» — тема есть в вопросах тестирования, но в тексте профстандартов прямо не названа.</p>
+        ${[...grouped.entries()].map(([cat, ts]) => `
+          <div class="cat"><div class="cat-title">${esc(cat)}</div>
+          ${topicChips(ts.map(t => ({ slug: t.slug, title: t.title, count: t.itemCount, testOnly: isTestOnly(t) })))}</div>`).join("")}
+      </div>`;
+    if (!slug) { view.innerHTML = list; return; }
+
+    const topic = await api(`/api/topics/${encodeURIComponent(slug)}${standardFilter ? `?standard=${encodeURIComponent(standardFilter)}` : ""}`);
+    const summary = topics.find(t => t.slug === slug);
+    view.innerHTML = `
+      <div class="card">
+        <div class="crumbs"><a ${link({ topic: "" })}>Все темы</a> · ${esc(topic.categoryTitle)}</div>
+        <h2 class="card-title">${esc(topic.title)}${topic.titleEn ? ` <span class="muted">(${esc(topic.titleEn)})</span>` : ""}</h2>
+        <p class="card-sub">${esc(topic.description)}</p>
+        <div class="pills">
+          <button type="button" class="pill ${standardFilter ? "" : "selected"}" ${link({ topic: slug })}>Все должности</button>
+          ${standards.map(s => {
+            const n = summary && summary.standards[s.code] ? summary.standards[s.code].items : 0;
+            return `<button type="button" class="pill ${standardFilter === s.code ? "selected" : ""}" ${link({ topic: slug, standard: s.code })} ${n ? "" : "disabled"}>${esc(s.code)} · ${n}</button>`;
+          }).join("")}
+        </div>
+        <div class="stat-row">
+          <div class="stat"><b>${topic.standards.reduce((n, s) => n + s.laborFunctions.length, 0)}</b>компетенций требуют тему</div>
+          <div class="stat"><b>${topic.questionCount}</b>вопросов в банке теста</div>
+        </div>
+        <div class="section-title">Сертификаты по теме</div>
+        ${certChips(topic.certifications)}
+      </div>
+      ${topic.standards.length ? topic.standards.map(s => `
+        <div class="card">
+          <h2 class="card-title"><a href="#" ${link({ standard: s.code })} style="color:inherit;">${esc(s.code)} — ${esc(s.title)}</a></h2>
+          <p class="card-sub">Компетенции этой должности, где нужна тема «${esc(topic.title)}».</p>
+          ${s.laborFunctions.map(lf => `
+            <div class="lf-block">
+              <div class="lf-head" ${link({ lf: lf.id })}><span class="lf-code">${esc(lf.code)}</span><span class="lf-title">${esc(lf.title)}</span></div>
+              <div style="margin-top:6px;">
+                ${lf.knowledge.map(i => itemRow({ ...i, kind: "knowledge" })).join("")}
+                ${lf.skills.map(i => itemRow({ ...i, kind: "skill" })).join("")}
+              </div>
+            </div>`).join("")}
+        </div>`).join("") : `<div class="card"><div class="muted">${isTestOnly(summary)
+          ? `Эта тема есть в тестировании (${topic.questionCount} вопр.), но ни один профстандарт не называет её прямо — вопросы проверяют современную практику, на которую опираются общие требования стандартов (защита информации в информационных системах, противодействие атакам).`
+          : "В выбранной должности пунктов по этой теме нет."}</div></div>`}
+      ${list}`;
+  }
+
+  // ----- Компетенция (ТФ) -----
+  async function renderLaborFunction(id){
+    setTab("search");
+    const lf = await api(`/api/labor-functions/${encodeURIComponent(id)}`);
+    const itemList = (items, kind) => items.length
+      ? items.map(i => itemRow({ ...i, kind })).join("")
+      : '<div class="muted">нет</div>';
+    view.innerHTML = `
+      <div class="card">
+        <div class="crumbs"><a ${link({ standard: lf.standard.code })}>${esc(lf.standard.code)} ${esc(lf.standard.title)}</a> · ОТФ ${esc(lf.generalizedFunction.code)} «${esc(lf.generalizedFunction.title)}» · уровень ${lf.generalizedFunction.qualificationLevel}</div>
+        <h2 class="card-title"><span class="lf-code">${esc(lf.code)}</span> ${esc(lf.title)}</h2>
+        <p class="card-sub">Компетенция (трудовая функция): чтобы её выполнять, нужны знания и умения ниже.</p>
+        <div class="section-title">Темы компетенции</div>
+        ${topicChips(lf.topics, { standard: lf.standard.code })}
+      </div>
+      <div class="card cols">
+        <div><div class="section-title">Нужно знать (${lf.knowledge.length})</div>${itemList(lf.knowledge, "knowledge")}</div>
+        <div><div class="section-title">Нужно уметь (${lf.skills.length})</div>${itemList(lf.skills, "skill")}</div>
+      </div>
+      <div class="card">
+        <div class="section-title">Сертификаты по темам компетенции</div>
+        ${certChips(lf.certifications)}
+      </div>`;
+  }
+
+  // ----- Пункт (знание или умение) -----
+  async function renderItem(id){
+    setTab("search");
+    const it = await api(`/api/competency-items/${encodeURIComponent(id)}`);
+    const isSkill = it.kind === "skill";
+    const top = it.counterparts.filter(c => c.sharedTopics.length);
+    const rest = it.counterparts.filter(c => !c.sharedTopics.length);
+    view.innerHTML = `
+      <div class="card">
+        <div class="crumbs"><a ${link({ standard: it.standard.code })}>${esc(it.standard.code)} ${esc(it.standard.title)}</a> · <a ${link({ lf: it.laborFunction.id })}>${esc(it.laborFunction.code)} ${esc(it.laborFunction.title)}</a></div>
+        <h2 class="card-title">${kindBadge(it.kind)}${esc(it.text)}</h2>
+        <p class="card-sub">${isSkill ? "Умение (навык)" : "Знание"} компетенции <a href="#" ${link({ lf: it.laborFunction.id })}>${esc(it.laborFunction.code)}</a>.</p>
+        <div class="section-title">Темы</div>
+        ${it.topics.length ? topicChips(it.topics) : '<div class="muted">Общий пункт, без темы.</div>'}
+      </div>
+      <div class="card">
+        <div class="section-title">${isSkill ? "Какие знания нужны для этого умения" : "В каких умениях применяется это знание"}</div>
+        <p class="card-sub">Пункты той же компетенции. ${top.length ? "Сначала — с общими темами (наиболее связанные)." : ""}</p>
+        ${top.map(itemRow).join("")}
+        ${rest.length ? `<details ${top.length ? "" : "open"}><summary class="muted" style="cursor:pointer;margin:8px 0;">${top.length ? "Остальные" : "Все"} ${isSkill ? "знания" : "умения"} компетенции (${rest.length})</summary>${rest.map(itemRow).join("")}</details>` : ""}
+        ${it.counterparts.length ? "" : '<div class="muted">В этой компетенции таких пунктов нет.</div>'}
+      </div>
+      <div class="card">
+        <div class="section-title">Те же темы в других должностях</div>
+        ${it.otherStandards.length ? `<div class="chips">${it.otherStandards.map(s =>
+          `<a class="chip" href="#" ${link({ standard: s.code })}>${esc(s.code)} — ${s.functions} ТФ, ${s.items} пунктов</a>`).join("")}</div>` : '<div class="muted">Нет.</div>'}
+        <div class="section-title">Сертификаты по темам</div>
+        ${certChips(it.certifications)}
+      </div>`;
+  }
+
+  // ----- Поиск -----
+  async function renderSearch(q){
+    setTab("search");
+    view.innerHTML = `
+      <div class="card">
+        <h2 class="card-title">Поиск по требованиям</h2>
+        <p class="card-sub">Найдите знание, умение, компетенцию или тему: «VPN», «межсетев», «инцидент», «криптограф»…</p>
+        <form class="search-row" id="search-form">
+          <input type="search" id="search-input" value="${esc(q)}" placeholder="Например: межсетевой экран" />
+          <button class="btn" type="submit">Найти</button>
+        </form>
+        <div id="search-results"></div>
+      </div>`;
+    document.getElementById("search-form").addEventListener("submit", e => {
+      e.preventDefault();
+      go({ search: document.getElementById("search-input").value.trim() });
+    });
+    if (!q || q.length < 2) return;
+    const res = await api(`/api/requirements/search?q=${encodeURIComponent(q)}`);
+    const out = document.getElementById("search-results");
+    if (!res.topics.length && !res.laborFunctions.length && !res.items.length) {
+      out.innerHTML = '<div class="muted">Ничего не найдено. Попробуйте часть слова (например, «криптограф»).</div>';
+      return;
+    }
+    out.innerHTML = `
+      ${res.topics.length ? `<div class="section-title">Темы</div>${topicChips(res.topics)}` : ""}
+      ${res.laborFunctions.length ? `<div class="section-title">Компетенции (${res.laborFunctions.length})</div>
+        ${res.laborFunctions.map(lf => `<div class="lf-block"><div class="lf-head" ${link({ lf: lf.id })}><span class="lf-code">${esc(lf.standard_code)} · ${esc(lf.code)}</span><span class="lf-title">${esc(lf.title)}</span></div></div>`).join("")}` : ""}
+      ${res.items.length ? `<div class="section-title">Знания и умения (${res.items.length}${res.items.length === 60 ? "+" : ""})</div>
+        ${res.items.map(i => `<div class="item" ${link({ item: i.id })}>${kindBadge(i.kind)}<span class="item-text">${esc(i.text)}</span><span class="lf-code" style="margin-left:auto;padding-left:10px;">${esc(i.standardCode)} ${esc(i.laborFunction.code)}</span></div>`).join("")}` : ""}`;
+  }
+
+  // ----- Сертификаты -----
+  async function renderCerts(){
+    setTab("certs");
+    const certs = await api("/api/certifications");
+    const topicTitle = new Map(topics.map(t => [t.slug, t.title]));
+    view.innerHTML = `
+      <div class="card">
+        <h2 class="card-title">Каталог сертификатов</h2>
+        <p class="card-sub">Какие темы требований подкрепляет каждый сертификат и как он проверяется. Бейджи Credly проверяются автоматически при регистрации кандидата.</p>
+        <table class="certs">
+          <thead><tr><th>Вендор</th><th>Сертификат</th><th>Темы</th><th>Проверка</th></tr></thead>
+          <tbody>${certs.map(c => `
+            <tr>
+              <td>${esc(c.vendorTitle)}</td>
+              <td><b>${esc(c.name)}</b><div class="muted">${esc(c.level)}</div></td>
+              <td>${topicChips(c.topics.map(t => ({ slug: t, title: topicTitle.get(t) || t })))}</td>
+              <td>${c.verify.type === "credly" ? "автоматически (Credly)" : "вручную"}<div class="muted"><a href="${esc(c.verify.url)}" target="_blank" rel="noopener noreferrer">${esc(c.verify.hint)}</a></div></td>
+            </tr>`).join("")}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function route(){
+    errorEl.classList.add("hidden");
+    const h = parseHash();
+    try {
+      if ("item" in h) await renderItem(h.item);
+      else if ("lf" in h) await renderLaborFunction(h.lf);
+      else if ("topic" in h) await renderTopic(h.topic, h.standard);
+      else if ("search" in h) await renderSearch(h.search);
+      else if ("certs" in h) await renderCerts();
+      else await renderStandard(h.standard);
+      window.scrollTo({ top: 0 });
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  window.addEventListener("hashchange", route);
+  (async () => {
+    try {
+      [standards, topics] = await Promise.all([api("/api/standards"), api("/api/topics")]);
+    } catch (err) {
+      showError(err.message + " — проверьте, что backend запущен");
+      return;
+    }
+    route();
+  })();
+</script>
+</body>
+</html>

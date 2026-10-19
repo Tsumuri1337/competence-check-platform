@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:," />
 <title>Проверка компетенций</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -180,12 +181,63 @@
   .done-icon{width:56px;height:56px;border-radius:50%;background:var(--success-soft);color:var(--success);
     display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:20px;}
 
+  input[type=password], input[type=tel]{
+    width:100%;border:1px solid var(--line-strong);border-radius:var(--radius);padding:11px 13px;
+    font-size:14px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  .field-hint{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .check-row{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;cursor:pointer;}
+  .check-row input{margin-top:3px;accent-color:var(--primary);flex-shrink:0;}
+
+  .topnav{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:28px;}
+  .topnav a{color:var(--ink-soft);text-decoration:none;padding-bottom:4px;border-bottom:2px solid transparent;}
+  .topnav a:hover{color:var(--primary);}
+  .topnav a.current{color:var(--primary);font-weight:600;border-bottom-color:var(--accent);}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:24px;}
+  .tab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:14px;font-family:inherit;cursor:pointer;color:var(--ink-soft);margin-bottom:-1px;}
+  .tab.active{color:var(--primary);font-weight:600;border-bottom-color:var(--accent);}
+
+  .profile-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
+  .profile-name{font-size:19px;font-weight:600;margin:0 0 4px;}
+  .profile-meta{font-size:13px;color:var(--ink-soft);}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;background:var(--primary-soft);color:var(--primary);}
+
+  .item-list{border:1px solid var(--line);border-radius:var(--radius);}
+  .item-row{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:13px 16px;border-top:1px solid var(--line);font-size:13.5px;}
+  .item-row:first-child{border-top:none;}
+  .item-main{min-width:0;flex:1;}
+  .item-title{font-weight:600;overflow-wrap:anywhere;}
+  .item-sub{font-size:12px;color:var(--ink-soft);margin-top:3px;overflow-wrap:anywhere;}
+  .item-sub a{color:var(--primary);}
+  .item-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+  .empty-note{font-size:13px;color:var(--ink-soft);padding:14px 16px;}
+
+  .status{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;background:var(--primary-soft);color:var(--primary);}
+  .status.verified{background:var(--success-soft);color:var(--success);}
+  .status.probable, .status.running, .status.claimed{background:var(--accent-soft);color:#5c3f11;}
+  .status.owner_mismatch, .status.not_found, .status.rejected, .status.failed{background:var(--danger-soft);color:var(--danger);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .chip{font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);text-decoration:none;}
+  a.chip:hover{border-color:var(--accent);background:var(--accent-soft);}
+
+  .subsection-title{font-size:14px;font-weight:600;margin:0 0 12px;}
+  .add-cert{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line-strong);}
+
   .hidden{display:none !important;}
   .note{margin-top:32px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
 </style>
 </head>
 <body>
 <div class="shell">
+
+  <nav class="topnav">
+    <a href="index.html">Главная</a>
+    <a href="test_flow.html" class="current">Личный кабинет</a>
+    <a href="requirements.html">Требования</a>
+    <a href="reviewer_dashboard.html">Панель ревьюера</a>
+  </nav>
 
   <div class="doc-head">
     <div class="doc-eyebrow">Проверка компетенций</div>
@@ -204,50 +256,189 @@
   <div class="banner error hidden" id="load-error"></div>
 
   <div class="restart-link hidden" id="restart-link">
-    <button type="button" class="link-btn" id="restart-btn">← Начать заново (выбрать другую роль или профстандарт)</button>
+    <button type="button" class="link-btn" id="restart-btn">← В личный кабинет (прервать эту проверку)</button>
   </div>
 
   <div class="steps" id="steps">
-    <div class="step active" data-step="0"><div class="step-dot">1</div><div class="step-label">Анкета</div></div>
+    <div class="step active" data-step="0"><div class="step-dot">1</div><div class="step-label">Кабинет</div></div>
     <div class="step" data-step="1"><div class="step-dot">2</div><div class="step-label">Самооценка</div></div>
     <div class="step" data-step="2"><div class="step-dot">3</div><div class="step-label">Тестирование</div></div>
     <div class="step" data-step="3"><div class="step-dot">4</div><div class="step-label">Практическое задание</div></div>
     <div class="step" data-step="4"><div class="step-dot">5</div><div class="step-label">Готово</div></div>
   </div>
 
-  <!-- STEP 0: registration -->
-  <div class="card" id="step-0">
-    <div class="card-head">
-      <h2 class="card-title">Начало проверки</h2>
-      <p class="card-sub">Укажите свои данные и выберите профстандарт, по которому проходите проверку.</p>
-    </div>
-    <div class="field">
-      <label class="field-label">Я проверяюсь как<span class="req">*</span></label>
-      <div class="radio-group" id="context-group">
-        <button type="button" class="radio-pill selected" data-value="employee">Сотрудник компании</button>
-        <button type="button" class="radio-pill" data-value="candidate">Кандидат на вакансию</button>
+  <!-- STEP 0: вход / регистрация / личный кабинет -->
+  <div id="step-0">
+
+    <!-- Не вошёл: вход или регистрация -->
+    <div class="card hidden" id="auth-card">
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="login">Вход</button>
+        <button type="button" class="tab" data-tab="register">Регистрация</button>
+      </div>
+
+      <div id="login-pane">
+        <div class="row2">
+          <div class="field">
+            <label class="field-label" for="l-email">Email</label>
+            <input type="email" id="l-email" autocomplete="username" placeholder="maria@example.ru" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="l-password">Пароль</label>
+            <input type="password" id="l-password" autocomplete="current-password" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="login-btn">Войти</button>
+        </div>
+      </div>
+
+      <div id="register-pane" class="hidden">
+        <div class="field">
+          <label class="field-label">Я проверяюсь как<span class="req">*</span></label>
+          <div class="radio-group" id="context-group">
+            <button type="button" class="radio-pill selected" data-value="candidate">Кандидат на вакансию</button>
+            <button type="button" class="radio-pill" data-value="employee">Сотрудник компании</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label" for="f-fullname">ФИО<span class="req">*</span></label>
+            <input type="text" id="f-fullname" placeholder="Иванова Мария Сергеевна" autocomplete="name" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-phone">Телефон<span class="req">*</span></label>
+            <input type="tel" id="f-phone" placeholder="+7 900 123-45-67" autocomplete="tel" />
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label" for="f-email">Email<span class="req">*</span></label>
+            <input type="email" id="f-email" placeholder="maria@example.ru" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-password">Пароль<span class="req">*</span></label>
+            <input type="password" id="f-password" autocomplete="new-password" placeholder="не короче 10 символов" />
+          </div>
+        </div>
+        <div class="field hidden" id="org-field">
+          <label class="field-label" for="f-org">Организация</label>
+          <input type="text" id="f-org" placeholder="ООО «Компания»" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="f-username">Никнейм на профессиональных платформах</label>
+          <input type="text" id="f-username" placeholder="например, mivanova" autocomplete="off" />
+          <div class="field-hint">Ваш ник на GitHub, Hack The Box, TryHackMe, Credly и т.п. — по нему мы найдём публичные профили и сертификаты. Можно не указывать: тогда ищем по началу email и по ФИО.</div>
+        </div>
+        <div class="field">
+          <label class="check-row">
+            <input type="checkbox" id="f-consent" />
+            <span>Я согласен(на) на автоматическую проверку моих публичных профилей и сертификатов (Credly, Cisco, Huawei, CompTIA, ISC2 и др.) по указанным ФИО, email и никнейму. Результаты увидит ревьюер.<span class="req">*</span></span>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="register-btn">Зарегистрироваться</button>
+        </div>
       </div>
     </div>
-    <div class="row2">
-      <div class="field">
-        <label class="field-label">ФИО<span class="req">*</span></label>
-        <input type="text" id="f-fullname" placeholder="Иванова Мария Сергеевна" />
+
+    <!-- Вошёл: личный кабинет -->
+    <div id="cabinet" class="hidden">
+      <div class="card">
+        <div class="profile-row">
+          <div>
+            <h2 class="profile-name" id="p-name"></h2>
+            <div class="profile-meta" id="p-meta"></div>
+          </div>
+          <div style="text-align:right;">
+            <span class="pill" id="p-context"></span>
+            <div style="margin-top:8px;"><button type="button" class="link-btn" id="logout-btn">Выйти</button></div>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label class="field-label">Email<span class="req">*</span></label>
-        <input type="email" id="f-email" placeholder="maria@example.ru" />
+
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Новая проверка</h2>
+          <p class="card-sub">Выберите профстандарт (должность). Что именно по нему нужно знать и уметь — во вкладке <a href="requirements.html" id="req-link">«Требования»</a>.</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="f-standard">Профессиональный стандарт<span class="req">*</span></label>
+          <select id="f-standard"><option value="">Загрузка…</option></select>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="start-btn">Начать проверку</button>
+        </div>
       </div>
-    </div>
-    <div class="field" id="org-field">
-      <label class="field-label">Организация</label>
-      <input type="text" id="f-org" placeholder="ООО «Компания»" />
-    </div>
-    <div class="field">
-      <label class="field-label">Профессиональный стандарт<span class="req">*</span></label>
-      <select id="f-standard"><option value="">Загрузка…</option></select>
-    </div>
-    <div class="btn-row">
-      <button class="btn" id="start-btn">Начать проверку</button>
+
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Сертификаты</h2>
+          <p class="card-sub">Найденные автоматически (Credly) и указанные вами. Подтверждённые сертификаты учитываются ревьюером.</p>
+        </div>
+        <div class="item-list" id="cert-list"></div>
+        <div class="add-cert">
+          <h3 class="subsection-title">Добавить сертификат</h3>
+          <div class="row2">
+            <div class="field">
+              <label class="field-label" for="c-catalog">Сертификат</label>
+              <select id="c-catalog"><option value="">Загрузка…</option></select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="c-id">Номер / ID сертификата</label>
+              <input type="text" id="c-id" placeholder="например, CSCO12345678" />
+            </div>
+          </div>
+          <div class="row2 hidden" id="c-custom">
+            <div class="field">
+              <label class="field-label" for="c-vendor">Вендор</label>
+              <input type="text" id="c-vendor" placeholder="например, Positive Technologies" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="c-name">Название</label>
+              <input type="text" id="c-name" />
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="c-url">Ссылка для проверки</label>
+            <input type="text" id="c-url" placeholder="https://www.credly.com/badges/…" />
+            <div class="field-hint" id="c-hint">Ссылка на бейдж Credly проверяется автоматически.</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" id="cert-add-btn">Добавить</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head quiz-head">
+          <div>
+            <h2 class="card-title">Публичные профили (OSINT)</h2>
+            <p class="card-sub">Поиск по никнейму на ИБ-платформах (Sherlock) и в Credly.</p>
+          </div>
+          <span class="status" id="osint-status"></span>
+        </div>
+        <div class="item-list" id="osint-list"></div>
+        <div class="add-cert">
+          <div class="row2">
+            <div class="field">
+              <label class="field-label" for="p-username">Никнейм</label>
+              <input type="text" id="p-username" placeholder="ваш ник на GitHub / HTB / Credly" autocomplete="off" />
+            </div>
+            <div class="field" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-secondary" id="username-save-btn">Сохранить ник</button>
+              <button class="btn btn-secondary" id="osint-rerun-btn">Повторить поиск</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">Мои проверки</h2>
+        </div>
+        <div class="item-list" id="assessment-list"></div>
+      </div>
     </div>
   </div>
 
@@ -324,6 +515,9 @@
       <span class="score-number" id="final-score">—</span>
       <span class="score-label">правильных ответов в тестировании</span>
     </div>
+    <div class="btn-row left" style="margin-top:20px;">
+      <button type="button" class="btn btn-secondary" id="back-to-cabinet-btn">В личный кабинет</button>
+    </div>
   </div>
 
   <div class="note">
@@ -336,11 +530,13 @@
 </div>
 
 <script>
-  const API_BASE = "http://localhost:3001";
+  // Страницы раздаёт сам backend, поэтому API — тот же origin (относительные
+  // пути): так httpOnly-кука сессии кабинета уходит с каждым запросом.
+  const API_BASE = location.protocol.startsWith("http") ? "" : "http://localhost:3001";
   const PROGRESS_KEY = "competence_check_progress";
 
   let assessmentId = null;
-  let selectedContext = "employee";
+  let selectedContext = "candidate";
   let selectedStandard = null;
   let quizQuestions = [];
   let quizAnswers = [];
@@ -348,18 +544,49 @@
   let practicalTasks = [];
   let selfAssessmentItems = [];
   let quizScore = null;
+  // Время на каждый вопрос (мс): сколько вопрос был на экране, пока вкладка
+  // видима. Идёт в итоговую оценку как сигнал «мгновенного угадывания»;
+  // сервер сверяет сумму с реально прошедшим временем.
+  let quizTimes = [];
+  let questionShownAt = null;
+  let timedIndex = null;
+  let currentPerson = null;
+  let catalog = [];
+  let osintPollTimer = null;
 
   const loadError = document.getElementById("load-error");
   function showError(msg){ loadError.textContent = msg; loadError.classList.remove("hidden"); }
   function hideError(){ loadError.classList.add("hidden"); }
 
+  // Данные OSINT приходят со сторонних сайтов — всё, что вставляется в HTML,
+  // экранируем.
+  function esc(v){
+    return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function safeUrl(u){ return /^https?:\/\//i.test(u || "") ? esc(u) : "#"; }
+  function formatDate(iso){ return iso ? new Date(iso).toLocaleDateString("ru-RU") : ""; }
+
+  async function api(path, opts = {}){
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...opts,
+      headers: { ...(opts.body ? { "Content-Type": "application/json" } : {}), ...(opts.headers || {}) },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && !path.startsWith("/api/people/login")) {
+      showAuth();
+      throw new Error("Сессия истекла — войдите снова.");
+    }
+    if (!res.ok) throw new Error(data.error || `Ошибка ${res.status}`);
+    return data;
+  }
+
   // Восстановление после обновления страницы: на каждый реальный переход
   // между шагами сохраняем достаточно, чтобы вернуться сюда же, а не
-  // терять анкету/самооценку/тест при случайном обновлении вкладки.
+  // терять самооценку/тест при случайном обновлении вкладки.
   function saveProgress(step){
     try {
       if (!assessmentId) return;
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ assessmentId, step, quizScore, quizAnswers, currentQuizIndex }));
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ assessmentId, step, quizScore, quizAnswers, currentQuizIndex, quizTimes }));
     } catch (e) { /* localStorage недоступен — просто не восстанавливаемся */ }
   }
   function loadSavedProgress(){
@@ -382,7 +609,8 @@
       if (i < n) stepEl.classList.add("done");
       if (i === n) stepEl.classList.add("active");
     }
-    document.getElementById("restart-link").classList.toggle("hidden", n === 0);
+    document.getElementById("restart-link").classList.toggle("hidden", n === 0 || n === 4);
+    if (n !== 0) stopOsintPolling();
     saveProgress(n);
   }
 
@@ -393,18 +621,41 @@
     quizQuestions = [];
     quizAnswers = [];
     currentQuizIndex = 0;
-    document.getElementById("f-fullname").value = "";
-    document.getElementById("f-email").value = "";
-    document.getElementById("f-org").value = "";
-    [document.getElementById("f-fullname"), document.getElementById("f-email"), document.getElementById("f-standard")]
-      .forEach(el => el.classList.remove("input-error"));
     hideError();
     goToStep(0);
+    showCabinetLoading();
+    refreshCabinet().catch(err => showError(err.message));
   }
 
   document.getElementById("restart-btn").addEventListener("click", () => {
-    if (!confirm("Начать заново? Текущий прогресс в этой проверке будет потерян.")) return;
+    if (!confirm("Вернуться в кабинет? Незавершённую проверку можно будет продолжить из списка «Мои проверки».")) return;
     resetToRegistration();
+  });
+  document.getElementById("back-to-cabinet-btn").addEventListener("click", resetToRegistration);
+
+  // ---------- Вход / регистрация ----------
+
+  const authCard = document.getElementById("auth-card");
+  const cabinetEl = document.getElementById("cabinet");
+
+  function showAuth(){
+    currentPerson = null;
+    stopOsintPolling();
+    cabinetEl.classList.add("hidden");
+    authCard.classList.remove("hidden");
+    document.getElementById("steps").classList.add("hidden");
+    for (let i = 1; i <= 4; i++) document.getElementById(`step-${i}`).classList.add("hidden");
+    document.getElementById("step-0").classList.remove("hidden");
+    document.getElementById("restart-link").classList.add("hidden");
+  }
+
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === tab));
+      document.getElementById("login-pane").classList.toggle("hidden", tab.dataset.tab !== "login");
+      document.getElementById("register-pane").classList.toggle("hidden", tab.dataset.tab !== "register");
+      hideError();
+    });
   });
 
   document.querySelectorAll("#context-group .radio-pill").forEach(btn => {
@@ -416,13 +667,288 @@
     });
   });
 
-  async function loadStandards(){
-    const res = await fetch(`${API_BASE}/api/standards`);
-    if (!res.ok) throw new Error("Не удалось загрузить список профстандартов");
-    const standards = await res.json();
-    const select = document.getElementById("f-standard");
-    select.innerHTML = standards.map(s => `<option value="${s.code}">${s.code} — ${s.title}</option>`).join("");
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_RE = /^\+?[0-9][0-9 ()-]{5,18}[0-9]$/;
+  const USERNAME_RE = /^[A-Za-z0-9._-]{2,40}$/;
+
+  document.querySelectorAll("#register-pane input, #login-pane input").forEach(el =>
+    el.addEventListener("input", () => el.classList.remove("input-error")));
+
+  function reportProblems(problems){
+    const message = problems.length === 1
+      ? problems[0].text[0].toUpperCase() + problems[0].text.slice(1) + "."
+      : "Заполните форму корректно: " + problems.map(p => p.text).join(", ") + ".";
+    problems.forEach(p => p.el && p.el.classList.add("input-error"));
+    showError(message);
+    if (problems[0].el) problems[0].el.focus();
   }
+
+  document.getElementById("login-btn").addEventListener("click", async () => {
+    hideError();
+    const emailEl = document.getElementById("l-email");
+    const pwEl = document.getElementById("l-password");
+    if (!emailEl.value.trim() || !pwEl.value) {
+      reportProblems([{ el: emailEl.value.trim() ? pwEl : emailEl, text: "введите email и пароль" }]);
+      return;
+    }
+    try {
+      await api("/api/people/login", { method: "POST", body: JSON.stringify({ email: emailEl.value.trim(), password: pwEl.value }) });
+      pwEl.value = "";
+      await enterCabinet();
+    } catch (err) { showError(err.message); }
+  });
+  document.getElementById("l-password").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("login-btn").click(); });
+
+  document.getElementById("register-btn").addEventListener("click", async () => {
+    hideError();
+    const el = id => document.getElementById(id);
+    const fullName = el("f-fullname").value.trim();
+    const email = el("f-email").value.trim();
+    const phone = el("f-phone").value.trim();
+    const password = el("f-password").value;
+    const osintUsername = el("f-username").value.trim();
+    const organizationName = el("f-org").value.trim();
+    const consent = el("f-consent").checked;
+
+    const problems = [];
+    if (!fullName) problems.push({ el: el("f-fullname"), text: "укажите ФИО" });
+    if (!PHONE_RE.test(phone)) problems.push({ el: el("f-phone"), text: "укажите телефон (например, +7 900 123-45-67)" });
+    if (!EMAIL_RE.test(email)) problems.push({ el: el("f-email"), text: "введите корректный email (например, name@example.ru)" });
+    if (password.length < 10) problems.push({ el: el("f-password"), text: "пароль — не короче 10 символов" });
+    if (osintUsername && !USERNAME_RE.test(osintUsername)) problems.push({ el: el("f-username"), text: "никнейм — латиница, цифры, точка, дефис, подчёркивание" });
+    if (!consent) problems.push({ el: el("f-consent"), text: "отметьте согласие на проверку профилей и сертификатов" });
+    if (problems.length) { reportProblems(problems); return; }
+
+    try {
+      await api("/api/people/register", {
+        method: "POST",
+        body: JSON.stringify({
+          fullName, email, phone, password, context: selectedContext,
+          organizationName: selectedContext === "employee" && organizationName ? organizationName : undefined,
+          osintUsername: osintUsername || undefined,
+          osintConsent: true,
+        }),
+      });
+      el("f-password").value = "";
+      await enterCabinet();
+    } catch (err) { showError(err.message); }
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    try { await api("/api/people/logout", { method: "POST" }); } catch (e) { /* всё равно выходим локально */ }
+    clearSavedProgress();
+    showAuth();
+  });
+
+  // ---------- Личный кабинет ----------
+
+  const CERT_STATUS = {
+    verified: "Подтверждён",
+    probable: "Вероятно, нужна проверка",
+    owner_mismatch: "Владелец не совпадает",
+    not_found: "Не найден",
+    needs_manual: "Проверит ревьюер",
+    claimed: "Проверяется",
+    rejected: "Отклонён",
+  };
+  const OSINT_STATUS = { running: "Идёт поиск…", done: "Готово", failed: "Ошибка" };
+  const ASSESSMENT_STATUS = { in_progress: "В процессе", completed: "Завершена" };
+
+  async function loadStandards(){
+    const standards = await api("/api/standards");
+    const select = document.getElementById("f-standard");
+    select.innerHTML = standards.map(s => `<option value="${esc(s.code)}">${esc(s.code)} — ${esc(s.title)}</option>`).join("");
+    const updateLink = () => { document.getElementById("req-link").href = `requirements.html#standard=${encodeURIComponent(select.value)}`; };
+    select.addEventListener("change", updateLink);
+    updateLink();
+  }
+
+  async function loadCatalog(){
+    catalog = await api("/api/certifications");
+    const byVendor = new Map();
+    for (const c of catalog) {
+      if (!byVendor.has(c.vendorTitle)) byVendor.set(c.vendorTitle, []);
+      byVendor.get(c.vendorTitle).push(c);
+    }
+    document.getElementById("c-catalog").innerHTML =
+      '<option value="">— выберите —</option>' +
+      [...byVendor.entries()].map(([vendor, list]) =>
+        `<optgroup label="${esc(vendor)}">${list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</optgroup>`
+      ).join("") +
+      '<option value="__custom">Другой сертификат…</option>';
+  }
+
+  document.getElementById("c-catalog").addEventListener("change", e => {
+    const value = e.target.value;
+    document.getElementById("c-custom").classList.toggle("hidden", value !== "__custom");
+    const cert = catalog.find(c => c.id === value);
+    document.getElementById("c-hint").textContent = cert
+      ? `${cert.vendorTitle}: ${cert.verify.hint}.`
+      : "Ссылка на бейдж Credly проверяется автоматически.";
+  });
+
+  function renderCertificates(certs){
+    const list = document.getElementById("cert-list");
+    if (!certs.length) {
+      list.innerHTML = '<div class="empty-note">Пока нет сертификатов. Добавьте их ниже — или они появятся после поиска по Credly.</div>';
+      return;
+    }
+    list.innerHTML = certs.map(c => `
+      <div class="item-row">
+        <div class="item-main">
+          <div class="item-title">${esc(c.vendor)} — ${esc(c.name)}</div>
+          <div class="item-sub">
+            ${c.source === "credly" ? "найден в Credly" : "указан вами"}${c.credentialId ? ` · № ${esc(c.credentialId)}` : ""}${c.issuedOn ? ` · выдан ${formatDate(c.issuedOn)}` : ""}
+            ${c.url ? ` · <a href="${safeUrl(c.url)}" target="_blank" rel="noopener noreferrer">ссылка</a>` : ""}
+          </div>
+          ${c.statusDetail ? `<div class="item-sub">${esc(c.statusDetail)}</div>` : ""}
+        </div>
+        <div class="item-actions">
+          <span class="status ${esc(c.status)}">${esc(CERT_STATUS[c.status] || c.status)}</span>
+          ${c.source === "candidate" ? `<button type="button" class="link-btn" data-delete-cert="${c.id}">Удалить</button>` : ""}
+        </div>
+      </div>`).join("");
+    list.querySelectorAll("[data-delete-cert]").forEach(btn => btn.addEventListener("click", async () => {
+      if (!confirm("Удалить этот сертификат?")) return;
+      try { await api(`/api/people/me/certificates/${btn.dataset.deleteCert}`, { method: "DELETE" }); await refreshCabinet(); }
+      catch (err) { showError(err.message); }
+    }));
+  }
+
+  function renderOsint(osint){
+    const statusEl = document.getElementById("osint-status");
+    const list = document.getElementById("osint-list");
+    if (!osint) {
+      statusEl.textContent = "не запускался";
+      statusEl.className = "status";
+      list.innerHTML = '<div class="empty-note">Поиск ещё не запускался.</div>';
+      return;
+    }
+    statusEl.textContent = OSINT_STATUS[osint.status] || osint.status;
+    statusEl.className = `status ${esc(osint.status)}`;
+    const rows = [];
+    rows.push(`<div class="item-row"><div class="item-main"><div class="item-sub">
+      Никнеймы: ${osint.usernames.length ? osint.usernames.map(esc).join(", ") : "—"} · запуск ${new Date(osint.startedAt).toLocaleString("ru-RU")}
+      ${osint.sherlockAvailable === false ? "<br/>Sherlock на сервере не установлен — проверены только Credly-профили." : ""}
+      ${osint.error && osint.sherlockAvailable !== false ? `<br/>${esc(osint.error)}` : ""}
+    </div></div></div>`);
+    if (osint.status === "done") {
+      const credlyFound = (osint.credly || []).filter(c => c.found);
+      rows.push(`<div class="item-row"><div class="item-main">
+        <div class="item-title">Возможные профили</div><div class="item-sub">Sherlock проверяет, существует ли аккаунт с таким ником; это может быть и однофамилец по нику.</div>
+        ${osint.profiles.length ? `<div class="chips">${osint.profiles.map(p =>
+          `<a class="chip" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.site)} · ${esc(p.username)}</a>`).join("")}</div>`
+          : '<div class="item-sub">Профилей не найдено.</div>'}
+        ${credlyFound.length ? `<div class="item-sub" style="margin-top:8px;">Credly: ${credlyFound.map(c =>
+          `${esc(c.slug)} — бейджей ${c.badgeCount}, засчитано ${c.kept}`).join("; ")}</div>` : ""}
+      </div></div>`);
+    }
+    list.innerHTML = rows.join("");
+  }
+
+  function renderAssessments(items){
+    const list = document.getElementById("assessment-list");
+    if (!items.length) { list.innerHTML = '<div class="empty-note">Вы ещё не проходили проверок.</div>'; return; }
+    list.innerHTML = items.map(a => `
+      <div class="item-row">
+        <div class="item-main">
+          <div class="item-title">${esc(a.standard_code)} — ${esc(a.standard_title)}</div>
+          <div class="item-sub">проверка №${a.id} · начата ${formatDate(a.created_at)}</div>
+        </div>
+        <div class="item-actions">
+          <span class="status ${a.status === "completed" ? "verified" : "claimed"}">${ASSESSMENT_STATUS[a.status]}</span>
+          ${a.status === "in_progress" ? `<button type="button" class="link-btn" data-resume="${a.id}">Продолжить</button>` : ""}
+        </div>
+      </div>`).join("");
+    list.querySelectorAll("[data-resume]").forEach(btn => btn.addEventListener("click", async () => {
+      const id = Number(btn.dataset.resume);
+      const a = items.find(x => x.id === id);
+      const saved = loadSavedProgress();
+      const state = saved && saved.assessmentId === id ? saved : { step: 1 };
+      quizScore = state.quizScore || null;
+      await resumeAt(state, { id, context: currentPerson.context, standard_code: a.standard_code, standard_title: a.standard_title });
+    }));
+  }
+
+  function stopOsintPolling(){ if (osintPollTimer) { clearTimeout(osintPollTimer); osintPollTimer = null; } }
+
+  // Пока кабинет обновляется, не показываем устаревшее содержимое
+  // (например, «ещё не проходили проверок» сразу после завершения проверки).
+  function showCabinetLoading(){
+    for (const id of ["cert-list", "osint-list", "assessment-list"]) {
+      document.getElementById(id).innerHTML = '<div class="empty-note">Загрузка…</div>';
+    }
+  }
+
+  async function refreshCabinet(){
+    const me = await api("/api/people/me");
+    currentPerson = me;
+    selectedContext = me.context;
+    document.getElementById("p-name").textContent = me.fullName;
+    document.getElementById("p-meta").textContent = [me.email, me.phone, me.organizationName].filter(Boolean).join(" · ");
+    document.getElementById("p-context").textContent = me.context === "candidate" ? "Кандидат на вакансию" : "Сотрудник компании";
+    const usernameInput = document.getElementById("p-username");
+    if (document.activeElement !== usernameInput) usernameInput.value = me.osintUsername || "";
+    renderCertificates(me.certificates);
+    renderOsint(me.osint);
+    renderAssessments(me.assessments);
+    // Пока поиск идёт — обновляем кабинет, чтобы результат появился сам.
+    stopOsintPolling();
+    if (me.osint && me.osint.status === "running") {
+      osintPollTimer = setTimeout(() => refreshCabinet().catch(() => {}), 4000);
+    }
+  }
+
+  async function enterCabinet(){
+    hideError();
+    authCard.classList.add("hidden");
+    cabinetEl.classList.remove("hidden");
+    document.getElementById("steps").classList.remove("hidden");
+    goToStep(0);
+    showCabinetLoading();
+    await Promise.all([refreshCabinet(), catalog.length ? null : loadCatalog()]);
+  }
+
+  document.getElementById("cert-add-btn").addEventListener("click", async () => {
+    hideError();
+    const catalogId = document.getElementById("c-catalog").value;
+    const credentialId = document.getElementById("c-id").value.trim();
+    const url = document.getElementById("c-url").value.trim();
+    const body = { credentialId: credentialId || undefined, url: url || undefined };
+    if (catalogId === "__custom") {
+      body.vendor = document.getElementById("c-vendor").value.trim();
+      body.name = document.getElementById("c-name").value.trim();
+      if (!body.vendor || !body.name) { showError("Укажите вендора и название сертификата."); return; }
+    } else if (catalogId) {
+      body.catalogId = catalogId;
+    } else {
+      showError("Выберите сертификат из списка.");
+      return;
+    }
+    if (url && !/^https:\/\//i.test(url)) { showError("Ссылка должна начинаться с https://"); return; }
+    if (!credentialId && !url) { showError("Укажите номер сертификата или ссылку для проверки."); return; }
+    try {
+      await api("/api/people/me/certificates", { method: "POST", body: JSON.stringify(body) });
+      ["c-id", "c-url", "c-vendor", "c-name"].forEach(id => { document.getElementById(id).value = ""; });
+      await refreshCabinet();
+    } catch (err) { showError(err.message); }
+  });
+
+  document.getElementById("username-save-btn").addEventListener("click", async () => {
+    hideError();
+    const value = document.getElementById("p-username").value.trim();
+    if (value && !USERNAME_RE.test(value)) { showError("Никнейм — латиница, цифры, точка, дефис, подчёркивание (2–40 символов)."); return; }
+    try {
+      await api("/api/people/me", { method: "PATCH", body: JSON.stringify({ osintUsername: value || null }) });
+      await refreshCabinet();
+    } catch (err) { showError(err.message); }
+  });
+
+  document.getElementById("osint-rerun-btn").addEventListener("click", async () => {
+    hideError();
+    try { await api("/api/people/me/osint", { method: "POST" }); await refreshCabinet(); }
+    catch (err) { showError(err.message); }
+  });
 
   function overviewCopy(context, standardTitle){
     if (context === "employee") {
@@ -438,66 +964,20 @@
     return "Эта самооценка не отражает ваши реальные навыки и способности применительно к данной позиции. Прохождение самооценки необязательно, однако мы настоятельно рекомендуем её пройти — она помогает нам составить более полное представление о вас как о кандидате.";
   }
 
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const fullNameInput = document.getElementById("f-fullname");
-  const emailInput = document.getElementById("f-email");
   const standardSelect = document.getElementById("f-standard");
-  [fullNameInput, emailInput].forEach(el => el.addEventListener("input", () => el.classList.remove("input-error")));
   standardSelect.addEventListener("change", () => standardSelect.classList.remove("input-error"));
 
   document.getElementById("start-btn").addEventListener("click", async () => {
     hideError();
-    [fullNameInput, emailInput, standardSelect].forEach(el => el.classList.remove("input-error"));
-
-    const fullName = fullNameInput.value.trim();
-    const email = emailInput.value.trim();
-    const organizationName = document.getElementById("f-org").value.trim();
     const standardCode = standardSelect.value;
     const standardTitle = standardSelect.selectedOptions[0]?.textContent.split(" — ").slice(1).join(" — ") || standardCode;
-
-    const problems = [];
-    let firstInvalid = null;
-    if (!fullName) {
-      fullNameInput.classList.add("input-error");
-      problems.push("укажите ФИО");
-      firstInvalid = firstInvalid || fullNameInput;
-    }
-    if (!email) {
-      emailInput.classList.add("input-error");
-      problems.push("укажите email");
-      firstInvalid = firstInvalid || emailInput;
-    } else if (!EMAIL_RE.test(email)) {
-      emailInput.classList.add("input-error");
-      problems.push("введите корректный адрес электронной почты (например, name@example.ru)");
-      firstInvalid = firstInvalid || emailInput;
-    }
     if (!standardCode) {
       standardSelect.classList.add("input-error");
-      problems.push("выберите профессиональный стандарт");
-      firstInvalid = firstInvalid || standardSelect;
-    }
-
-    if (problems.length) {
-      const message = problems.length === 1
-        ? problems[0][0].toUpperCase() + problems[0].slice(1) + "."
-        : "Заполните форму корректно: " + problems.join(", ") + ".";
-      showError(message);
-      firstInvalid.focus();
+      showError("Выберите профессиональный стандарт.");
       return;
     }
-
     try {
-      const res = await fetch(`${API_BASE}/api/assessments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          standardCode,
-          context: selectedContext,
-          person: { fullName, email, organizationName: organizationName || undefined },
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Не удалось начать проверку");
+      const data = await api("/api/assessments", { method: "POST", body: JSON.stringify({ standardCode }) });
       assessmentId = data.assessmentId;
       selectedStandard = { code: standardCode, title: standardTitle };
 
@@ -657,15 +1137,35 @@
     quizQuestions = await res.json();
     if (savedState && Array.isArray(savedState.quizAnswers) && savedState.quizAnswers.length === quizQuestions.length) {
       quizAnswers = savedState.quizAnswers;
+      quizTimes = Array.isArray(savedState.quizTimes) ? savedState.quizTimes : quizQuestions.map(() => 0);
       currentQuizIndex = Math.min(savedState.currentQuizIndex || 0, quizQuestions.length - 1);
     } else {
       quizAnswers = quizQuestions.map(() => null);
+      quizTimes = quizQuestions.map(() => 0);
       currentQuizIndex = 0;
     }
     renderQuizQuestion();
   }
 
+  function stopQuestionTimer(){
+    if (questionShownAt === null || timedIndex === null) return;
+    quizTimes[timedIndex] = (quizTimes[timedIndex] || 0) + (Date.now() - questionShownAt);
+    questionShownAt = null;
+  }
+  function startQuestionTimer(){
+    stopQuestionTimer();
+    timedIndex = currentQuizIndex;
+    questionShownAt = document.hidden ? null : Date.now();
+  }
+  document.addEventListener("visibilitychange", () => {
+    const onQuestion = !document.getElementById("step-2").classList.contains("hidden")
+      && !document.getElementById("quiz-question").classList.contains("hidden");
+    if (document.hidden) stopQuestionTimer();
+    else if (onQuestion && timedIndex !== null) questionShownAt = Date.now();
+  });
+
   function renderQuizQuestion(){
+    startQuestionTimer();
     document.getElementById("quiz-nav-review").classList.add("hidden");
     document.getElementById("quiz-nav-questions").classList.remove("hidden");
     document.getElementById("quiz-review").classList.add("hidden");
@@ -699,6 +1199,7 @@
   }
 
   function renderQuizReview(){
+    stopQuestionTimer();
     document.getElementById("quiz-question").classList.add("hidden");
     document.getElementById("quiz-nav-questions").classList.add("hidden");
     document.getElementById("quiz-nav-review").classList.remove("hidden");
@@ -754,7 +1255,8 @@
       return;
     }
 
-    const responses = quizQuestions.map((q, i) => ({ questionId: q.id, selectedIndex: quizAnswers[i] }));
+    stopQuestionTimer();
+    const responses = quizQuestions.map((q, i) => ({ questionId: q.id, selectedIndex: quizAnswers[i], timeMs: quizTimes[i] || null }));
 
     try {
       const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz-responses`, {
@@ -892,9 +1394,22 @@
     } catch (e) { /* backend недоступен — просто не предлагаем восстановление */ }
   }
 
-  loadStandards()
-    .then(checkForSavedProgress)
-    .catch(err => showError(err.message + " — проверьте, что backend запущен на " + API_BASE));
+  // Старт: если сессия кабинета есть — сразу в кабинет (и предложить
+  // продолжить незавершённую проверку), иначе — форма входа/регистрации.
+  (async () => {
+    try {
+      await loadStandards();
+    } catch (err) {
+      showError(err.message + " — проверьте, что backend запущен");
+      return;
+    }
+    const me = await fetch(`${API_BASE}/api/people/me`).catch(() => null);
+    if (!me || !me.ok) { showAuth(); return; }
+    try {
+      await enterCabinet();
+      await checkForSavedProgress();
+    } catch (err) { showError(err.message); }
+  })();
 </script>
 </body>
 </html>

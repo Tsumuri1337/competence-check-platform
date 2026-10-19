@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:," />
 <title>Панель ревьюера — проверка компетенций</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -169,6 +170,73 @@
   .logout-link{background:none;border:none;color:var(--primary);font-size:11px;font-family:inherit;cursor:pointer;
     padding:0;text-decoration:underline;margin-top:2px;}
 
+  .topnav{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:24px;}
+  .topnav a{color:var(--ink-soft);text-decoration:none;padding-bottom:4px;border-bottom:2px solid transparent;}
+  .topnav a:hover{color:var(--primary);}
+  .topnav a.current{color:var(--primary);font-weight:600;border-bottom-color:var(--accent);}
+
+  .badge.certs{background:var(--success-soft);color:var(--success);}
+  .cert-row{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid var(--line);font-size:13px;}
+  .cert-row:first-child{border-top:none;padding-top:0;}
+  .cert-main{min-width:0;flex:1;}
+  .cert-title{font-weight:600;overflow-wrap:anywhere;}
+  .cert-sub{font-size:11.5px;color:var(--ink-soft);margin-top:3px;overflow-wrap:anywhere;}
+  .cert-sub a{color:var(--primary);}
+  .cert-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+  .cert-btns{display:flex;gap:6px;}
+  .cert-btns button{border:1px solid var(--line-strong);background:#fff;font-size:11px;font-family:inherit;padding:4px 9px;border-radius:4px;cursor:pointer;}
+  .cert-btns button:hover{border-color:var(--primary);}
+  .status{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;background:var(--primary-soft);color:var(--primary);}
+  .status.verified{background:var(--success-soft);color:var(--success);}
+  .status.probable, .status.claimed, .status.running{background:var(--warn-soft);color:var(--warn);}
+  .status.owner_mismatch, .status.not_found, .status.rejected, .status.failed{background:var(--danger-soft);color:var(--danger);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .chip{font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);text-decoration:none;}
+  a.chip:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .osint-box{background:var(--primary-soft);border-radius:var(--radius);padding:12px 14px;font-size:12.5px;margin-top:14px;}
+  .topic-bar{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px;gap:10px;align-items:center;padding:5px 0;font-size:12.5px;}
+  .topic-bar a{color:var(--ink);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .topic-bar a:hover{color:var(--primary);text-decoration:underline;}
+  .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;}
+  .bar span{display:block;height:100%;background:var(--primary);}
+  .bar.low span{background:var(--danger);}
+  .topic-pct{font-weight:600;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+
+  .score-hero{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;background:var(--primary-soft);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px;}
+  @media (max-width:600px){.score-hero{grid-template-columns:1fr;gap:12px;}}
+  .score-big{font-size:46px;font-weight:700;color:var(--primary);line-height:1;font-family:'IBM Plex Sans',sans-serif;}
+  .score-big small{font-size:16px;color:var(--ink-soft);font-weight:500;margin-left:4px;}
+  .score-grade{font-size:15px;font-weight:600;margin-bottom:4px;}
+  .score-note{font-size:12px;color:var(--ink-soft);}
+  .score-note.warn{color:var(--warn);}
+  .comp{display:grid;grid-template-columns:minmax(0,1fr) 140px 64px;gap:12px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13px;}
+  .comp:first-of-type{border-top:none;}
+  .comp-title{font-weight:600;}
+  .comp-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .comp-pts{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;}
+  .comp.missing{opacity:.6;}
+  @media (max-width:600px){.comp{grid-template-columns:minmax(0,1fr) 64px;}.comp .bar{display:none;}}
+  .flag{font-size:12px;color:var(--warn);background:var(--warn-soft);border-radius:4px;padding:7px 10px;margin-top:8px;}
+  .ai-box{border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;}
+  .ai-profile{font-size:14.5px;font-weight:600;margin-bottom:8px;}
+  .ai-text{font-size:13px;line-height:1.6;margin-bottom:12px;}
+  .ai-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:700px){.ai-cols{grid-template-columns:1fr;}}
+  .ai-cols h4{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:0 0 6px;}
+  .ai-cols ul, .ai-list{margin:0;padding-left:18px;font-size:13px;}
+  .ai-cols li, .ai-list li{margin-bottom:6px;}
+  .ai-cols li span{display:block;font-size:11.5px;color:var(--ink-soft);}
+  .ai-meta{font-size:11px;color:var(--ink-soft);margin-top:10px;}
+  .ai-task{font-size:12px;background:#fbf8f1;border:1px dashed var(--line-strong);border-radius:4px;padding:8px 10px;margin-bottom:12px;}
+  .ai-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+  .ai-textarea{width:100%;min-height:140px;border:1px solid var(--line-strong);border-radius:var(--radius);padding:10px 12px;font-size:12px;font-family:'IBM Plex Mono',monospace;margin-top:10px;}
+  .ai-paste-row{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;}
+  .ai-paste-row input{flex:1;min-width:140px;border:1px solid var(--line-strong);border-radius:var(--radius);padding:8px 10px;font-size:13px;font-family:inherit;}
+  .ai-redo{margin-top:12px;font-size:12.5px;}
+  .ai-redo summary{cursor:pointer;color:var(--primary);margin-bottom:10px;}
+  .badge.score{background:var(--primary);color:#fff;}
+  .badge.score.provisional{background:var(--primary-soft);color:var(--primary);}
+
   .empty{display:flex;align-items:center;justify-content:center;height:500px;color:var(--ink-soft);font-size:13px;text-align:center;padding:0 40px;}
   .note{margin-top:28px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
   .hidden{display:none !important;}
@@ -182,9 +250,9 @@
     .layout{display:block;}
     .list{display:none !important;}
     .panel{border:none;box-shadow:none;padding:0;min-height:0;}
-    .task-rubric, .task-submission, .score-row, .lf-group{display:none !important;}
+    .task-rubric, .task-submission, .score-row, .lf-group, .cert-btns, .topnav{display:none !important;}
     .task-score-print{display:block;font-size:13px;font-weight:600;margin-top:4px;color:var(--primary);}
-    .btn-outline, .dbtn{display:none !important;}
+    .btn-outline, .dbtn, #ai-generate-btn, .ai-actions, .ai-redo, #ai-copy-status, .ai-paste, .ai-textarea{display:none !important;}
     .list-row.active{border-left:none;padding-left:18px;}
   }
 </style>
@@ -193,7 +261,7 @@
 
 <div class="login-shell hidden" id="login-screen">
   <h1 class="login-title">Вход для ревьюера</h1>
-  <p class="login-sub">Панель проверок компетенций — доступ только для зарегистрированных ревьюеров.</p>
+  <p class="login-sub">Панель проверок компетенций — доступ только для зарегистрированных ревьюеров. Кандидатам и сотрудникам — в <a href="test_flow.html">личный кабинет</a>.</p>
   <div class="login-error hidden" id="login-error"></div>
   <div class="login-field">
     <label for="login-email">Email</label>
@@ -207,6 +275,13 @@
 </div>
 
 <div class="shell hidden" id="app-shell">
+
+  <nav class="topnav">
+    <a href="index.html">Главная</a>
+    <a href="test_flow.html">Личный кабинет</a>
+    <a href="requirements.html">Требования</a>
+    <a href="reviewer_dashboard.html" class="current">Панель ревьюера</a>
+  </nav>
 
   <div class="doc-head">
     <div>
@@ -255,7 +330,17 @@
 </div>
 
 <script>
-  const API_BASE = "http://localhost:3001";
+  // Страницы раздаёт сам backend — API на том же origin, кука сессии уходит сама.
+  const API_BASE = location.protocol.startsWith("http") ? "" : "http://localhost:3001";
+  // Данные OSINT и сертификатов приходят со сторонних сайтов — экранируем.
+  function esc(v){
+    return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function safeUrl(u){ return /^https?:\/\//i.test(u || "") ? esc(u) : "#"; }
+  const CERT_STATUS = {
+    verified: "Подтверждён", probable: "Вероятно (имя совпало)", owner_mismatch: "Владелец не совпадает",
+    not_found: "Не найден", needs_manual: "Нужна ручная проверка", claimed: "Не проверен", rejected: "Отклонён",
+  };
 
   const CONTEXT_LABEL = { employee: "Сотрудник", candidate: "Кандидат" };
   const STATUS_LABEL = { in_progress: "В процессе", completed: "Завершена" };
@@ -314,7 +399,7 @@
     listEl.innerHTML = assessments.map(a => `
       <div class="list-row ${a.id===activeId?'active':''}" data-id="${a.id}">
         <div class="lr-main">
-          <div class="lr-name">${a.full_name}</div>
+          <div class="lr-name">${esc(a.full_name)}</div>
           <div class="lr-vac">${a.standard_code} — ${a.standard_title}</div>
           <div class="lr-date">начато ${formatDate(a.created_at)}</div>
         </div>
@@ -322,6 +407,8 @@
           <span class="badge ${a.context}">${CONTEXT_LABEL[a.context]}</span>
           <span class="badge ${a.status}">${STATUS_LABEL[a.status]}</span>
           ${a.context === "candidate" && a.decision ? `<span class="badge decision-${a.decision}">${DECISION_LABEL[a.decision]}</span>` : ""}
+          ${a.verified_certificates ? `<span class="badge certs">серт.: ${a.verified_certificates}</span>` : ""}
+          ${a.score_total !== null && a.score_total !== undefined ? `<span class="badge score ${a.score_provisional ? "provisional" : ""}" title="${a.score_provisional ? "предварительный балл" : esc(a.score_grade)}">${a.score_total}/100${a.score_provisional ? "*" : ""}</span>` : ""}
         </div>
       </div>`).join("");
     listEl.querySelectorAll(".list-row").forEach(row => {
@@ -356,7 +443,8 @@
       document.title = DEFAULT_TITLE;
       return;
     }
-    const { assessment, quiz, practicalSubmissions, selfAssessment, summary } = activeReport;
+    const { assessment, quiz, practicalSubmissions, selfAssessment, summary, certificates, osint, topicBreakdown, score, aiSummary } = activeReport;
+    const aiByTask = new Map(((aiSummary && aiSummary.content.practicalAssessments) || []).map(p => [p.taskId, p]));
     document.title = `${assessment.full_name} — комплексный отчёт`;
 
     const lfGroups = new Map();
@@ -402,9 +490,9 @@
     panelEl.innerHTML = `
       <div class="panel-head">
         <div>
-          <h2 class="panel-name">${assessment.full_name}</h2>
+          <h2 class="panel-name">${esc(assessment.full_name)}</h2>
           <p class="panel-vac">${assessment.standard_code} — ${assessment.standard_title}</p>
-          <div class="panel-meta">проверка №${assessment.id} · ${assessment.email} · начато ${formatDate(assessment.created_at)}</div>
+          <div class="panel-meta">проверка №${assessment.id} · ${esc(assessment.email)}${assessment.phone ? " · " + esc(assessment.phone) : ""} · начато ${formatDate(assessment.created_at)}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <span class="badge ${assessment.context}">${CONTEXT_LABEL[assessment.context]}</span>
@@ -421,6 +509,14 @@
         </div>
       </div>
 
+      ${renderScoreSection(score)}
+
+      ${renderAiSection(aiSummary, score)}
+
+      ${renderTopicBreakdown(topicBreakdown)}
+
+      ${renderCertificatesSection(certificates, osint, assessment)}
+
       <div class="section-block">
         <div class="section-title">Практическое задание</div>
         ${practicalSubmissions.length === 0 ? '<div style="font-size:13px;color:var(--ink-soft);">Задание пока не отправлено.</div>' :
@@ -428,10 +524,11 @@
             <div class="task-card" data-submission-id="${ps.id}">
               <div class="task-prompt">${ps.prompt}</div>
               <div class="task-rubric"><b>Рубрика:</b> ${ps.rubric}</div>
-              <div class="task-submission">${ps.submission_text}</div>
+              <div class="task-submission">${esc(ps.submission_text)}</div>
+              ${aiByTask.has(ps.task_id) ? (() => { const a = aiByTask.get(ps.task_id); return `<div class="ai-task"><b>AI: полнота ${a.fullness}%</b>${a.covered.length ? ` · раскрыто: ${a.covered.map(esc).join("; ")}` : ""}${a.missing.length ? `<br/>Не раскрыто: ${a.missing.map(esc).join("; ")}` : ""}<br/><span style="color:var(--ink-soft)">Подсказка для ревьюера — в итоговый балл идёт ваша оценка; AI-оценка учитывается, только пока вашей нет.</span></div>`; })() : ""}
               <div class="score-row">
                 <input type="number" min="0" max="100" placeholder="0-100" value="${ps.reviewer_score ?? ''}" class="score-input" />
-                <textarea placeholder="Комментарий ревьюера…" class="notes-input">${ps.reviewer_notes ?? ''}</textarea>
+                <textarea placeholder="Комментарий ревьюера…" class="notes-input">${esc(ps.reviewer_notes ?? '')}</textarea>
                 <button type="button" class="save-score-btn">Сохранить</button>
               </div>
               ${ps.reviewer_score !== null ? '<div class="score-saved">Оценка сохранена.</div>' : ''}
@@ -492,6 +589,16 @@
       panelEl.querySelectorAll(".lf-group").forEach(g => g.classList.remove("open"));
     });
 
+    panelEl.querySelectorAll("[data-cert-review]").forEach(btn => {
+      btn.addEventListener("click", () => reviewCertificate(assessment.id, Number(btn.dataset.certId), btn.dataset.certReview));
+    });
+    const aiBtn = document.getElementById("ai-generate-btn");
+    if (aiBtn) aiBtn.addEventListener("click", () => generateAiSummary(assessment.id, aiBtn));
+    bindAiControls(assessment.id);
+    const osintBtn = document.getElementById("osint-rerun-btn");
+    if (osintBtn) osintBtn.addEventListener("click", () => rerunOsint(assessment.id));
+    schedulePanelRefresh(osint);
+
     const pdfBtn = document.getElementById("download-pdf-btn");
     if (pdfBtn) pdfBtn.addEventListener("click", () => window.print());
 
@@ -518,6 +625,283 @@
         }
       });
     });
+  }
+
+  const DIFFICULTY_LABEL = { easy: "лёгкие", medium: "средние", hard: "сложные" };
+  const SOURCE_LABEL = { reviewer: "ревьюер", ai: "AI (предв.)", pending: "не оценено", not_submitted: "не отправлено" };
+
+  function componentSubtitle(c){
+    const d = c.details;
+    if (c.key === "knowledge") {
+      return `${d.correct}/${d.total} верно (${d.rawPercent}%), с учётом сложности ${d.weightedPercent}% · ` +
+        Object.entries(d.byDifficulty).filter(([, v]) => v.total).map(([k, v]) => `${DIFFICULTY_LABEL[k]} ${v.correct}/${v.total}`).join(", ");
+    }
+    if (c.key === "pace") return `медиана ${d.medianSeconds} с на вопрос, всего ~${d.totalMinutes} мин · быстрее 3 с: ${d.rapidGuesses}`;
+    if (c.key === "practical") return `средняя оценка ${d.averageScore}/100 · ` + d.tasks.map(t => `${t.score === null ? "—" : t.score} (${SOURCE_LABEL[t.source]})`).join(", ");
+    if (c.key === "certificates") {
+      return d.certificates.length
+        ? d.certificates.map(x => `${esc(x.name)}: ${x.value} (релевантность ${x.relevancePercent}%)`).join("; ") + (d.uncappedPoints > c.max ? ` · сумма ${d.uncappedPoints}, ограничено ${c.max}` : "")
+        : "подтверждённых сертификатов нет";
+    }
+    return "";
+  }
+
+  const COMPONENT_TITLE = { knowledge: "Знания (тест с учётом сложности)", pace: "Темп и вдумчивость ответов", practical: "Практические задания", certificates: "Подтверждённые сертификаты" };
+  const CALIBRATION = { overestimates: "переоценивает себя", underestimates: "недооценивает себя", realistic: "оценивает себя реалистично" };
+
+  function renderScoreSection(score){
+    if (!score) return "";
+    if (score.total === null) {
+      return `<div class="section-block"><div class="section-title">Итоговая оценка</div><div class="score-note">Появится после того, как кандидат отправит тест.</div></div>`;
+    }
+    const missing = score.missing.map(k => `<div class="comp missing"><div><div class="comp-title">${COMPONENT_TITLE[k]}</div><div class="comp-sub">нет данных — не учитывается, балл пересчитан на остальные части</div></div><div class="bar"><span style="width:0"></span></div><span class="comp-pts">—/${score.method.weights[k]}</span></div>`).join("");
+    const cal = score.selfCalibration;
+    return `
+      <div class="section-block">
+        <div class="section-title">Итоговая оценка</div>
+        <div class="score-hero">
+          <div class="score-big">${score.total}<small>/ 100</small></div>
+          <div>
+            <div class="score-grade">${esc(score.grade.title)}</div>
+            ${score.provisional ? `<div class="score-note warn">Предварительно: ${score.provisionalReasons.map(esc).join("; ")}</div>` : `<div class="score-note">Все части оценены.</div>`}
+            ${cal ? `<div class="score-note">Самооценка ${cal.selfPercent}% против ${cal.testPercent}% в тесте — ${CALIBRATION[cal.verdict]} (в балл не входит)</div>` : ""}
+          </div>
+        </div>
+        ${score.components.map(c => `
+          <div class="comp">
+            <div><div class="comp-title">${esc(c.title)}</div><div class="comp-sub">${componentSubtitle(c)}</div></div>
+            <div class="bar ${c.points / c.max < 0.5 ? "low" : ""}"><span style="width:${Math.round(c.points / c.max * 100)}%"></span></div>
+            <span class="comp-pts">${c.points}/${c.max}</span>
+          </div>`).join("")}
+        ${missing}
+        ${score.flags.map(f => `<div class="flag">⚠ ${esc(f)}</div>`).join("")}
+        <details style="margin-top:10px;font-size:12px;color:var(--ink-soft);"><summary style="cursor:pointer;">Как считается</summary>
+          <p>Знания — ${score.method.weights.knowledge}, темп — ${score.method.weights.pace}, практика — ${score.method.weights.practical}, сертификаты — ${score.method.weights.certificates} баллов.
+          Сложность вопроса: ${esc(score.method.difficulty)}; сложный вопрос весит до 2× лёгкого, пропущенный считается неверным.
+          Темп: доля ответов не быстрее ${score.method.rapidGuessSeconds} с. Практика: оценка ревьюера (пока её нет — AI-оценка полноты, балл предварительный).
+          Сертификаты: только подтверждённые; уровень (entry 3 … expert 12) × релевантность темам должности, максимум ${score.method.weights.certificates}.
+          Уровни: ${score.method.grades.map(g => `${g.min}+ — ${esc(g.title)}`).join(", ")}.</p>
+        </details>
+      </div>`;
+  }
+
+  // Три способа получить резюме: скопировать запрос в свой чат-ассистент
+  // (Gemini и т.п., без API-ключа) и вставить ответ обратно — или через API.
+  function aiControls(canGenerate, hasSummary){
+    if (!canGenerate) return '<div class="score-note">Доступно после отправки теста.</div>';
+    return `
+      <div class="ai-actions">
+        <button type="button" class="btn-outline" id="ai-copy-btn">1. Скопировать запрос</button>
+        <button type="button" class="btn-outline" id="ai-paste-toggle">2. Вставить ответ</button>
+        <button type="button" class="link-btn" id="ai-generate-btn">${hasSummary ? "Обновить через API" : "или через API (нужен ключ)"}</button>
+      </div>
+      <div class="score-note" id="ai-copy-status">Скопируйте запрос, вставьте его в Gemini (или другой чат), затем вставьте ответ сюда. ФИО и контакты в запрос не попадают.</div>
+      <textarea class="ai-textarea hidden" id="ai-prompt-fallback" readonly></textarea>
+      <div class="ai-paste hidden" id="ai-paste-panel">
+        <textarea class="ai-textarea" id="ai-paste-text" placeholder="Вставьте сюда ответ ассистента целиком (JSON)…"></textarea>
+        <div class="ai-paste-row">
+          <input type="text" id="ai-paste-source" value="Gemini" aria-label="Каким ассистентом сделано" />
+          <button type="button" class="btn-outline" id="ai-import-btn">Сохранить резюме</button>
+        </div>
+      </div>`;
+  }
+
+  function renderAiSection(ai, score){
+    const canGenerate = score && score.total !== null;
+    if (!ai) {
+      return `<div class="section-block"><div class="section-title">AI-резюме</div>${aiControls(canGenerate, false)}</div>`;
+    }
+    const c = ai.content;
+    const list = (items) => items.length ? `<ul>${items.map(i => `<li>${esc(i.title)}${i.evidence ? `<span>${esc(i.evidence)}</span>` : ""}</li>`).join("")}</ul>` : '<div class="score-note">—</div>';
+    return `
+      <div class="section-block">
+        <div class="section-title">AI-резюме</div>
+        <div class="ai-box">
+          <div class="ai-profile">${esc(c.candidateProfile)}</div>
+          <div class="ai-text">${esc(c.summary)}</div>
+          <div class="ai-cols">
+            <div><h4>Сильные стороны</h4>${list(c.strengths)}</div>
+            <div><h4>Слабые стороны</h4>${list(c.weaknesses)}</div>
+          </div>
+          ${c.recommendations.length ? `<h4 style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:14px 0 6px;">Рекомендации</h4><ul class="ai-list">${c.recommendations.map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+          ${c.riskFlags.map(f => `<div class="flag">⚠ ${esc(f)}</div>`).join("")}
+          <div class="ai-meta">${esc(ai.model)} · ${new Date(ai.createdAt).toLocaleString("ru-RU")} · AI не выставляет балл и не принимает решение — это подсказка ревьюеру.</div>
+        </div>
+        <details class="ai-redo"><summary>Сформировать заново</summary>${aiControls(canGenerate, true)}</details>
+      </div>`;
+  }
+
+  function bindAiControls(assessmentId){
+    const copyBtn = document.getElementById("ai-copy-btn");
+    if (!copyBtn) return;
+    const status = document.getElementById("ai-copy-status");
+    copyBtn.addEventListener("click", async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/ai-summary/prompt`);
+        if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Не удалось подготовить запрос");
+        try {
+          await navigator.clipboard.writeText(data.prompt);
+          status.textContent = `Запрос скопирован (${Math.round(data.prompt.length / 1000)} тыс. символов). Вставьте его в Gemini, затем нажмите «2. Вставить ответ».`;
+        } catch (e) {
+          // Буфер обмена недоступен (не https, запрет браузера) — показываем текст для ручного копирования.
+          const box = document.getElementById("ai-prompt-fallback");
+          box.value = data.prompt;
+          box.classList.remove("hidden");
+          box.select();
+          status.textContent = "Браузер не дал доступ к буферу обмена — выделите текст ниже и скопируйте (Ctrl+C).";
+        }
+        document.getElementById("ai-paste-panel").classList.remove("hidden");
+        hideError();
+      } catch (err) { showError(err.message); }
+    });
+    document.getElementById("ai-paste-toggle").addEventListener("click", () => {
+      document.getElementById("ai-paste-panel").classList.toggle("hidden");
+      document.getElementById("ai-paste-text").focus();
+    });
+    document.getElementById("ai-import-btn").addEventListener("click", async () => {
+      const btn = document.getElementById("ai-import-btn");
+      btn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/ai-summary/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: document.getElementById("ai-paste-text").value, source: document.getElementById("ai-paste-source").value }),
+        });
+        if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Не удалось сохранить резюме");
+        hideError();
+        await refreshList();
+        await selectAssessment(assessmentId);
+      } catch (err) {
+        showError(err.message);
+        btn.disabled = false;
+      }
+    });
+  }
+
+  async function generateAiSummary(assessmentId, btn){
+    btn.disabled = true;
+    btn.textContent = "Формируется… (до минуты)";
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/ai-summary`, { method: "POST" });
+      if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сформировать AI-резюме");
+      hideError();
+      await refreshList();
+      await selectAssessment(assessmentId);
+    } catch (err) {
+      showError(err.message);
+      btn.disabled = false;
+      btn.textContent = "Повторить";
+    }
+  }
+
+  function renderTopicBreakdown(rows){
+    if (!rows || !rows.length) return "";
+    // Только темы, по которым было хотя бы 3 вопроса, — на 1-2 вопросах процент шумный.
+    const shown = rows.filter(r => r.total >= 3).sort((a, b) => a.correct / a.total - b.correct / b.total);
+    if (!shown.length) return "";
+    return `
+      <div class="section-block">
+        <div class="section-title">Тестирование по темам требований</div>
+        ${shown.map(r => {
+          const pct = Math.round(r.correct / r.total * 100);
+          return `<div class="topic-bar">
+            <a href="requirements.html#topic=${encodeURIComponent(r.slug)}" target="_blank" title="${esc(r.category_title)}">${esc(r.title)}</a>
+            <div class="bar ${pct < 50 ? "low" : ""}"><span style="width:${pct}%"></span></div>
+            <span class="topic-pct">${r.correct}/${r.total}</span>
+          </div>`;
+        }).join("")}
+      </div>`;
+  }
+
+  function renderCertificatesSection(certificates, osint, assessment){
+    const certRows = (certificates || []).map(c => `
+      <div class="cert-row">
+        <div class="cert-main">
+          <div class="cert-title">${esc(c.vendor)} — ${esc(c.name)}</div>
+          <div class="cert-sub">
+            ${c.source === "credly" ? "найден OSINT (Credly)" : "заявлен кандидатом"}${c.credentialId ? ` · № ${esc(c.credentialId)}` : ""}${c.issuedOn ? ` · выдан ${new Date(c.issuedOn).toLocaleDateString("ru-RU")}` : ""}
+            ${c.url ? ` · <a href="${safeUrl(c.url)}" target="_blank" rel="noopener noreferrer">открыть</a>` : ""}
+            ${c.verifyUrl ? ` · <a href="${safeUrl(c.verifyUrl)}" target="_blank" rel="noopener noreferrer">проверка у вендора</a>` : ""}
+          </div>
+          ${c.statusDetail ? `<div class="cert-sub">${esc(c.statusDetail)}</div>` : ""}
+          ${c.topics.length ? `<div class="chips">${c.topics.map(t => `<a class="chip" href="requirements.html#topic=${encodeURIComponent(t)}" target="_blank">${esc(t)}</a>`).join("")}</div>` : ""}
+        </div>
+        <div class="cert-side">
+          <span class="status ${esc(c.status)}">${esc(CERT_STATUS[c.status] || c.status)}</span>
+          <div class="cert-btns">
+            ${c.status !== "verified" ? `<button type="button" data-cert-review="verified" data-cert-id="${c.id}">Подтвердить</button>` : ""}
+            ${c.status !== "rejected" ? `<button type="button" data-cert-review="rejected" data-cert-id="${c.id}">Отклонить</button>` : ""}
+          </div>
+        </div>
+      </div>`).join("");
+
+    let osintHtml = '<div class="osint-box">OSINT-поиск по этому человеку ещё не запускался.</div>';
+    if (osint) {
+      const when = new Date(osint.startedAt).toLocaleString("ru-RU");
+      const credlyFound = (osint.credly || []).filter(c => c.found);
+      osintHtml = `<div class="osint-box">
+        <b>OSINT:</b> ${osint.status === "running" ? "идёт поиск…" : osint.status === "failed" ? "ошибка — " + esc(osint.error) : "завершён"} · ${when}
+        · ники: ${osint.usernames.length ? osint.usernames.map(esc).join(", ") : "—"}${assessment.osint_username ? "" : " (кандидат ник не указал — использован email)"}
+        ${osint.sherlockAvailable === false ? "<br/>Sherlock на сервере не установлен — проверен только Credly." : ""}
+        ${osint.status === "done" ? `
+          <div class="chips">${osint.profiles.length ? osint.profiles.map(p =>
+            `<a class="chip" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.site)} · ${esc(p.username)}</a>`).join("") : "<span>Профили Sherlock не нашёл.</span>"}</div>
+          ${credlyFound.length ? `<div style="margin-top:6px;">Credly: ${credlyFound.map(c => `${esc(c.slug)}${c.explicit ? "" : " (по ФИО)"} — бейджей ${c.badgeCount}, засчитано ${c.kept}`).join("; ")}</div>` : ""}` : ""}
+      </div>`;
+    }
+
+    return `
+      <div class="section-block">
+        <div class="section-title">Сертификаты и OSINT
+          <button type="button" class="link-btn" id="osint-rerun-btn" ${osint && osint.status === "running" ? "disabled" : ""}>Обновить OSINT</button>
+        </div>
+        ${certRows || '<div style="font-size:13px;color:var(--ink-soft);">Сертификатов нет — кандидат не указал, OSINT не нашёл.</div>'}
+        ${osintHtml}
+      </div>`;
+  }
+
+  let panelRefreshTimer = null;
+  function schedulePanelRefresh(osint){
+    if (panelRefreshTimer) { clearTimeout(panelRefreshTimer); panelRefreshTimer = null; }
+    if (osint && osint.status === "running" && activeId) {
+      const id = activeId;
+      panelRefreshTimer = setTimeout(() => { if (activeId === id) selectAssessment(id); }, 5000);
+    }
+  }
+
+  async function reviewCertificate(assessmentId, certId, status){
+    const note = status === "rejected" ? prompt("Причина отклонения (необязательно):", "") : "";
+    if (note === null) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/certificates/${certId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, note: note || undefined }),
+      });
+      if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сохранить решение по сертификату");
+      hideError();
+      await refreshList();
+      await selectAssessment(assessmentId);
+    } catch (err) { showError(err.message); }
+  }
+
+  async function rerunOsint(assessmentId){
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/osint`, { method: "POST" });
+      if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось запустить OSINT");
+      hideError();
+      await selectAssessment(assessmentId);
+    } catch (err) { showError(err.message); }
   }
 
   async function submitDecision(id, decision){

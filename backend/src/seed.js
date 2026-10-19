@@ -2,6 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const { query, pool } = require("./db");
 const { hashPassword } = require("./lib/auth");
+const { loadTopics, matchTopics } = require("./lib/topics");
+const { encrypt, emailBlindIndex } = require("./lib/pii");
 
 const CONTENT_DIR = path.join(__dirname, "content");
 
@@ -98,12 +100,70 @@ async function upsertReviewer(fullName, email, role, password) {
   return inserted.rows[0].id;
 }
 
+// Тематический индекс — производные данные: каждый запуск пересобирает
+// темы и их привязку к пунктам знаний/умений и вопросам теста по правилам из
+// content/topics.json, поэтому правка правил применяется повторным `npm run seed`.
+async function seedTopics() {
+  const { categories, topics } = loadTopics();
+  const categoryTitle = new Map(categories.map((c) => [c.slug, c.title]));
+  const categoryOrder = new Map(categories.map((c, i) => [c.slug, i]));
+  await query("DELETE FROM competency_item_topics");
+  await query("DELETE FROM quiz_question_topics");
+  const slugs = topics.map((t) => t.slug);
+  await query("DELETE FROM topics WHERE NOT (slug = ANY($1))", [slugs]);
+
+  const topicIds = new Map();
+  for (const [i, t] of topics.entries()) {
+    const { rows } = await query(
+      `INSERT INTO topics (slug, category, category_title, title, title_en, description, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (slug) DO UPDATE SET category = $2, category_title = $3, title = $4, title_en = $5, description = $6, sort_order = $7
+       RETURNING id`,
+      [t.slug, t.category, categoryTitle.get(t.category), t.title, t.titleEn || null, t.description || null, categoryOrder.get(t.category) * 100 + i]
+    );
+    topicIds.set(t.slug, rows[0].id);
+  }
+
+  async function tag(table, column, rows) {
+    const pairs = [];
+    for (const r of rows) for (const slug of matchTopics(r.text, topics)) pairs.push([r.id, topicIds.get(slug)]);
+    for (let i = 0; i < pairs.length; i += 1000) {
+      const chunk = pairs.slice(i, i + 1000);
+      await query(
+        `INSERT INTO ${table} (${column}, topic_id) SELECT * FROM unnest($1::int[], $2::int[])`,
+        [chunk.map((p) => p[0]), chunk.map((p) => p[1])]
+      );
+    }
+    return pairs.length;
+  }
+  const items = await query("SELECT id, text FROM competency_items");
+  const questions = await query("SELECT id, text FROM quiz_questions");
+  const itemLinks = await tag("competency_item_topics", "competency_item_id", items.rows);
+  const questionLinks = await tag("quiz_question_topics", "quiz_question_id", questions.rows);
+  console.log(`Темы: ${topics.length}, связей со знаниями/умениями: ${itemLinks}, с вопросами теста: ${questionLinks}`);
+}
+
+// Демо-кандидат для ручной проверки личного кабинета (только если такого
+// email ещё нет — существующую запись не трогаем).
+async function upsertDemoPerson() {
+  const email = "candidate@example.ru";
+  const existing = await query("SELECT id FROM people WHERE email_hash = $1", [emailBlindIndex(email)]);
+  if (existing.rows[0]) return;
+  await query(
+    `INSERT INTO people (full_name, email, email_hash, phone, password_hash, context, osint_consent_at)
+     VALUES ($1, $2, $3, $4, $5, 'candidate', now())`,
+    [encrypt("Демо Кандидат"), encrypt(email), emailBlindIndex(email), encrypt("+79000000000"), hashPassword("candidate123")]
+  );
+}
+
 async function seed() {
   for (const code of STANDARD_FILES) {
     await loadStandard(code);
   }
+  await seedTopics();
   await upsertReviewer("А. Ревьюер", "reviewer@example.ru", "reviewer", "reviewer123");
-  console.log("Seed complete. Демо-ревьюер: reviewer@example.ru / reviewer123");
+  await upsertDemoPerson();
+  console.log("Seed complete. Демо-ревьюер: reviewer@example.ru / reviewer123, демо-кандидат: candidate@example.ru / candidate123");
 }
 
 seed()
