@@ -623,6 +623,7 @@
     currentQuizIndex = 0;
     hideError();
     goToStep(0);
+    showCabinetLoading();
     refreshCabinet().catch(err => showError(err.message));
   }
 
@@ -871,6 +872,14 @@
 
   function stopOsintPolling(){ if (osintPollTimer) { clearTimeout(osintPollTimer); osintPollTimer = null; } }
 
+  // Пока кабинет обновляется, не показываем устаревшее содержимое
+  // (например, «ещё не проходили проверок» сразу после завершения проверки).
+  function showCabinetLoading(){
+    for (const id of ["cert-list", "osint-list", "assessment-list"]) {
+      document.getElementById(id).innerHTML = '<div class="empty-note">Загрузка…</div>';
+    }
+  }
+
   async function refreshCabinet(){
     const me = await api("/api/people/me");
     currentPerson = me;
@@ -896,6 +905,7 @@
     cabinetEl.classList.remove("hidden");
     document.getElementById("steps").classList.remove("hidden");
     goToStep(0);
+    showCabinetLoading();
     await Promise.all([refreshCabinet(), catalog.length ? null : loadCatalog()]);
   }
 
