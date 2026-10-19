@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:," />
 <title>Панель ревьюера — проверка компетенций</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -169,6 +170,38 @@
   .logout-link{background:none;border:none;color:var(--primary);font-size:11px;font-family:inherit;cursor:pointer;
     padding:0;text-decoration:underline;margin-top:2px;}
 
+  .topnav{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:24px;}
+  .topnav a{color:var(--ink-soft);text-decoration:none;padding-bottom:4px;border-bottom:2px solid transparent;}
+  .topnav a:hover{color:var(--primary);}
+  .topnav a.current{color:var(--primary);font-weight:600;border-bottom-color:var(--accent);}
+
+  .badge.certs{background:var(--success-soft);color:var(--success);}
+  .cert-row{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid var(--line);font-size:13px;}
+  .cert-row:first-child{border-top:none;padding-top:0;}
+  .cert-main{min-width:0;flex:1;}
+  .cert-title{font-weight:600;overflow-wrap:anywhere;}
+  .cert-sub{font-size:11.5px;color:var(--ink-soft);margin-top:3px;overflow-wrap:anywhere;}
+  .cert-sub a{color:var(--primary);}
+  .cert-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+  .cert-btns{display:flex;gap:6px;}
+  .cert-btns button{border:1px solid var(--line-strong);background:#fff;font-size:11px;font-family:inherit;padding:4px 9px;border-radius:4px;cursor:pointer;}
+  .cert-btns button:hover{border-color:var(--primary);}
+  .status{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:10px;white-space:nowrap;background:var(--primary-soft);color:var(--primary);}
+  .status.verified{background:var(--success-soft);color:var(--success);}
+  .status.probable, .status.claimed, .status.running{background:var(--warn-soft);color:var(--warn);}
+  .status.owner_mismatch, .status.not_found, .status.rejected, .status.failed{background:var(--danger-soft);color:var(--danger);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .chip{font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);text-decoration:none;}
+  a.chip:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .osint-box{background:var(--primary-soft);border-radius:var(--radius);padding:12px 14px;font-size:12.5px;margin-top:14px;}
+  .topic-bar{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px;gap:10px;align-items:center;padding:5px 0;font-size:12.5px;}
+  .topic-bar a{color:var(--ink);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .topic-bar a:hover{color:var(--primary);text-decoration:underline;}
+  .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;}
+  .bar span{display:block;height:100%;background:var(--primary);}
+  .bar.low span{background:var(--danger);}
+  .topic-pct{font-weight:600;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+
   .empty{display:flex;align-items:center;justify-content:center;height:500px;color:var(--ink-soft);font-size:13px;text-align:center;padding:0 40px;}
   .note{margin-top:28px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
   .hidden{display:none !important;}
@@ -182,7 +215,7 @@
     .layout{display:block;}
     .list{display:none !important;}
     .panel{border:none;box-shadow:none;padding:0;min-height:0;}
-    .task-rubric, .task-submission, .score-row, .lf-group{display:none !important;}
+    .task-rubric, .task-submission, .score-row, .lf-group, .cert-btns, .topnav{display:none !important;}
     .task-score-print{display:block;font-size:13px;font-weight:600;margin-top:4px;color:var(--primary);}
     .btn-outline, .dbtn{display:none !important;}
     .list-row.active{border-left:none;padding-left:18px;}
@@ -193,7 +226,7 @@
 
 <div class="login-shell hidden" id="login-screen">
   <h1 class="login-title">Вход для ревьюера</h1>
-  <p class="login-sub">Панель проверок компетенций — доступ только для зарегистрированных ревьюеров.</p>
+  <p class="login-sub">Панель проверок компетенций — доступ только для зарегистрированных ревьюеров. Кандидатам и сотрудникам — в <a href="test_flow.html">личный кабинет</a>.</p>
   <div class="login-error hidden" id="login-error"></div>
   <div class="login-field">
     <label for="login-email">Email</label>
@@ -207,6 +240,13 @@
 </div>
 
 <div class="shell hidden" id="app-shell">
+
+  <nav class="topnav">
+    <a href="index.html">Главная</a>
+    <a href="test_flow.html">Личный кабинет</a>
+    <a href="requirements.html">Требования</a>
+    <a href="reviewer_dashboard.html" class="current">Панель ревьюера</a>
+  </nav>
 
   <div class="doc-head">
     <div>
@@ -255,7 +295,17 @@
 </div>
 
 <script>
-  const API_BASE = "http://localhost:3001";
+  // Страницы раздаёт сам backend — API на том же origin, кука сессии уходит сама.
+  const API_BASE = location.protocol.startsWith("http") ? "" : "http://localhost:3001";
+  // Данные OSINT и сертификатов приходят со сторонних сайтов — экранируем.
+  function esc(v){
+    return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function safeUrl(u){ return /^https?:\/\//i.test(u || "") ? esc(u) : "#"; }
+  const CERT_STATUS = {
+    verified: "Подтверждён", probable: "Вероятно (имя совпало)", owner_mismatch: "Владелец не совпадает",
+    not_found: "Не найден", needs_manual: "Нужна ручная проверка", claimed: "Не проверен", rejected: "Отклонён",
+  };
 
   const CONTEXT_LABEL = { employee: "Сотрудник", candidate: "Кандидат" };
   const STATUS_LABEL = { in_progress: "В процессе", completed: "Завершена" };
@@ -314,7 +364,7 @@
     listEl.innerHTML = assessments.map(a => `
       <div class="list-row ${a.id===activeId?'active':''}" data-id="${a.id}">
         <div class="lr-main">
-          <div class="lr-name">${a.full_name}</div>
+          <div class="lr-name">${esc(a.full_name)}</div>
           <div class="lr-vac">${a.standard_code} — ${a.standard_title}</div>
           <div class="lr-date">начато ${formatDate(a.created_at)}</div>
         </div>
@@ -322,6 +372,7 @@
           <span class="badge ${a.context}">${CONTEXT_LABEL[a.context]}</span>
           <span class="badge ${a.status}">${STATUS_LABEL[a.status]}</span>
           ${a.context === "candidate" && a.decision ? `<span class="badge decision-${a.decision}">${DECISION_LABEL[a.decision]}</span>` : ""}
+          ${a.verified_certificates ? `<span class="badge certs">серт.: ${a.verified_certificates}</span>` : ""}
         </div>
       </div>`).join("");
     listEl.querySelectorAll(".list-row").forEach(row => {
@@ -356,7 +407,7 @@
       document.title = DEFAULT_TITLE;
       return;
     }
-    const { assessment, quiz, practicalSubmissions, selfAssessment, summary } = activeReport;
+    const { assessment, quiz, practicalSubmissions, selfAssessment, summary, certificates, osint, topicBreakdown } = activeReport;
     document.title = `${assessment.full_name} — комплексный отчёт`;
 
     const lfGroups = new Map();
@@ -402,9 +453,9 @@
     panelEl.innerHTML = `
       <div class="panel-head">
         <div>
-          <h2 class="panel-name">${assessment.full_name}</h2>
+          <h2 class="panel-name">${esc(assessment.full_name)}</h2>
           <p class="panel-vac">${assessment.standard_code} — ${assessment.standard_title}</p>
-          <div class="panel-meta">проверка №${assessment.id} · ${assessment.email} · начато ${formatDate(assessment.created_at)}</div>
+          <div class="panel-meta">проверка №${assessment.id} · ${esc(assessment.email)}${assessment.phone ? " · " + esc(assessment.phone) : ""} · начато ${formatDate(assessment.created_at)}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
           <span class="badge ${assessment.context}">${CONTEXT_LABEL[assessment.context]}</span>
@@ -421,6 +472,10 @@
         </div>
       </div>
 
+      ${renderTopicBreakdown(topicBreakdown)}
+
+      ${renderCertificatesSection(certificates, osint, assessment)}
+
       <div class="section-block">
         <div class="section-title">Практическое задание</div>
         ${practicalSubmissions.length === 0 ? '<div style="font-size:13px;color:var(--ink-soft);">Задание пока не отправлено.</div>' :
@@ -428,10 +483,10 @@
             <div class="task-card" data-submission-id="${ps.id}">
               <div class="task-prompt">${ps.prompt}</div>
               <div class="task-rubric"><b>Рубрика:</b> ${ps.rubric}</div>
-              <div class="task-submission">${ps.submission_text}</div>
+              <div class="task-submission">${esc(ps.submission_text)}</div>
               <div class="score-row">
                 <input type="number" min="0" max="100" placeholder="0-100" value="${ps.reviewer_score ?? ''}" class="score-input" />
-                <textarea placeholder="Комментарий ревьюера…" class="notes-input">${ps.reviewer_notes ?? ''}</textarea>
+                <textarea placeholder="Комментарий ревьюера…" class="notes-input">${esc(ps.reviewer_notes ?? '')}</textarea>
                 <button type="button" class="save-score-btn">Сохранить</button>
               </div>
               ${ps.reviewer_score !== null ? '<div class="score-saved">Оценка сохранена.</div>' : ''}
@@ -492,6 +547,13 @@
       panelEl.querySelectorAll(".lf-group").forEach(g => g.classList.remove("open"));
     });
 
+    panelEl.querySelectorAll("[data-cert-review]").forEach(btn => {
+      btn.addEventListener("click", () => reviewCertificate(assessment.id, Number(btn.dataset.certId), btn.dataset.certReview));
+    });
+    const osintBtn = document.getElementById("osint-rerun-btn");
+    if (osintBtn) osintBtn.addEventListener("click", () => rerunOsint(assessment.id));
+    schedulePanelRefresh(osint);
+
     const pdfBtn = document.getElementById("download-pdf-btn");
     if (pdfBtn) pdfBtn.addEventListener("click", () => window.print());
 
@@ -518,6 +580,110 @@
         }
       });
     });
+  }
+
+  function renderTopicBreakdown(rows){
+    if (!rows || !rows.length) return "";
+    // Только темы, по которым было хотя бы 3 вопроса, — на 1-2 вопросах процент шумный.
+    const shown = rows.filter(r => r.total >= 3).sort((a, b) => a.correct / a.total - b.correct / b.total);
+    if (!shown.length) return "";
+    return `
+      <div class="section-block">
+        <div class="section-title">Тестирование по темам требований</div>
+        ${shown.map(r => {
+          const pct = Math.round(r.correct / r.total * 100);
+          return `<div class="topic-bar">
+            <a href="requirements.html#topic=${encodeURIComponent(r.slug)}" target="_blank" title="${esc(r.category_title)}">${esc(r.title)}</a>
+            <div class="bar ${pct < 50 ? "low" : ""}"><span style="width:${pct}%"></span></div>
+            <span class="topic-pct">${r.correct}/${r.total}</span>
+          </div>`;
+        }).join("")}
+      </div>`;
+  }
+
+  function renderCertificatesSection(certificates, osint, assessment){
+    const certRows = (certificates || []).map(c => `
+      <div class="cert-row">
+        <div class="cert-main">
+          <div class="cert-title">${esc(c.vendor)} — ${esc(c.name)}</div>
+          <div class="cert-sub">
+            ${c.source === "credly" ? "найден OSINT (Credly)" : "заявлен кандидатом"}${c.credentialId ? ` · № ${esc(c.credentialId)}` : ""}${c.issuedOn ? ` · выдан ${new Date(c.issuedOn).toLocaleDateString("ru-RU")}` : ""}
+            ${c.url ? ` · <a href="${safeUrl(c.url)}" target="_blank" rel="noopener noreferrer">открыть</a>` : ""}
+            ${c.verifyUrl ? ` · <a href="${safeUrl(c.verifyUrl)}" target="_blank" rel="noopener noreferrer">проверка у вендора</a>` : ""}
+          </div>
+          ${c.statusDetail ? `<div class="cert-sub">${esc(c.statusDetail)}</div>` : ""}
+          ${c.topics.length ? `<div class="chips">${c.topics.map(t => `<a class="chip" href="requirements.html#topic=${encodeURIComponent(t)}" target="_blank">${esc(t)}</a>`).join("")}</div>` : ""}
+        </div>
+        <div class="cert-side">
+          <span class="status ${esc(c.status)}">${esc(CERT_STATUS[c.status] || c.status)}</span>
+          <div class="cert-btns">
+            ${c.status !== "verified" ? `<button type="button" data-cert-review="verified" data-cert-id="${c.id}">Подтвердить</button>` : ""}
+            ${c.status !== "rejected" ? `<button type="button" data-cert-review="rejected" data-cert-id="${c.id}">Отклонить</button>` : ""}
+          </div>
+        </div>
+      </div>`).join("");
+
+    let osintHtml = '<div class="osint-box">OSINT-поиск по этому человеку ещё не запускался.</div>';
+    if (osint) {
+      const when = new Date(osint.startedAt).toLocaleString("ru-RU");
+      const credlyFound = (osint.credly || []).filter(c => c.found);
+      osintHtml = `<div class="osint-box">
+        <b>OSINT:</b> ${osint.status === "running" ? "идёт поиск…" : osint.status === "failed" ? "ошибка — " + esc(osint.error) : "завершён"} · ${when}
+        · ники: ${osint.usernames.length ? osint.usernames.map(esc).join(", ") : "—"}${assessment.osint_username ? "" : " (кандидат ник не указал — использован email)"}
+        ${osint.sherlockAvailable === false ? "<br/>Sherlock на сервере не установлен — проверен только Credly." : ""}
+        ${osint.status === "done" ? `
+          <div class="chips">${osint.profiles.length ? osint.profiles.map(p =>
+            `<a class="chip" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.site)} · ${esc(p.username)}</a>`).join("") : "<span>Профили Sherlock не нашёл.</span>"}</div>
+          ${credlyFound.length ? `<div style="margin-top:6px;">Credly: ${credlyFound.map(c => `${esc(c.slug)}${c.explicit ? "" : " (по ФИО)"} — бейджей ${c.badgeCount}, засчитано ${c.kept}`).join("; ")}</div>` : ""}` : ""}
+      </div>`;
+    }
+
+    return `
+      <div class="section-block">
+        <div class="section-title">Сертификаты и OSINT
+          <button type="button" class="link-btn" id="osint-rerun-btn" ${osint && osint.status === "running" ? "disabled" : ""}>Обновить OSINT</button>
+        </div>
+        ${certRows || '<div style="font-size:13px;color:var(--ink-soft);">Сертификатов нет — кандидат не указал, OSINT не нашёл.</div>'}
+        ${osintHtml}
+      </div>`;
+  }
+
+  let panelRefreshTimer = null;
+  function schedulePanelRefresh(osint){
+    if (panelRefreshTimer) { clearTimeout(panelRefreshTimer); panelRefreshTimer = null; }
+    if (osint && osint.status === "running" && activeId) {
+      const id = activeId;
+      panelRefreshTimer = setTimeout(() => { if (activeId === id) selectAssessment(id); }, 5000);
+    }
+  }
+
+  async function reviewCertificate(assessmentId, certId, status){
+    const note = status === "rejected" ? prompt("Причина отклонения (необязательно):", "") : "";
+    if (note === null) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/certificates/${certId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, note: note || undefined }),
+      });
+      if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сохранить решение по сертификату");
+      hideError();
+      await refreshList();
+      await selectAssessment(assessmentId);
+    } catch (err) { showError(err.message); }
+  }
+
+  async function rerunOsint(assessmentId){
+    try {
+      const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/osint`, { method: "POST" });
+      if (isSessionExpired(res)) throw new Error("Сессия истекла — войдите снова.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось запустить OSINT");
+      hideError();
+      await selectAssessment(assessmentId);
+    } catch (err) { showError(err.message); }
   }
 
   async function submitDecision(id, decision){

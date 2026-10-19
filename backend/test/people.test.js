@@ -4,6 +4,10 @@ const { startTestServer, uniqueEmail, registerPerson, cleanupPerson, cookieFrom,
 
 let server, baseUrl;
 const emails = [];
+// Неудачные входы этого файла пишутся и в счётчик по IP (общий для всех
+// тестов на localhost) — подчищаем их, как auth.test.js, иначе после
+// нескольких прогонов подряд IP упирается в лимит и падают чужие тесты.
+const startedAt = new Date();
 function newEmail(prefix) {
   const e = uniqueEmail(prefix);
   emails.push(e);
@@ -16,6 +20,7 @@ test.before(async () => {
 
 test.after(async () => {
   for (const e of emails) await cleanupPerson(e);
+  await pool.query("DELETE FROM login_attempts WHERE key LIKE 'ip:%' AND at >= $1", [startedAt]);
   server.close();
   await pool.end();
 });

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:," />
+<title>Проверка компетенций</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --ink-soft:#666f7a;
+    --paper:#F6F4EF;
+    --surface:#FFFFFF;
+    --line:#E1DDD3;
+    --primary:#2C3E50;
+    --primary-soft:#eef1f4;
+    --accent:#B8863D;
+    --accent-soft:#F6ECDA;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55;}
+  .shell{max-width:920px;margin:0 auto;padding:72px 28px 100px;}
+  @media (max-width:600px){.shell{padding:40px 16px 80px;}}
+  .doc-eyebrow{font-size:12.5px;color:var(--ink-soft);letter-spacing:.04em;margin-bottom:10px;text-transform:uppercase;}
+  h1{font-size:32px;font-weight:700;margin:0 0 10px;color:var(--primary);letter-spacing:-.01em;}
+  .lead{font-size:15.5px;color:var(--ink-soft);margin:0 0 40px;max-width:64ch;}
+  .doors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px;}
+  @media (max-width:700px){.doors{grid-template-columns:1fr;}}
+  .door{display:block;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:28px 30px;text-decoration:none;color:inherit;box-shadow:0 1px 3px rgba(27,36,48,.04);transition:border-color .15s, transform .15s;}
+  .door:hover{border-color:var(--accent);transform:translateY(-1px);}
+  .door-kicker{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:600;margin-bottom:8px;}
+  .door h2{font-size:20px;margin:0 0 8px;}
+  .door p{font-size:13.5px;color:var(--ink-soft);margin:0 0 16px;}
+  .door ul{margin:0;padding-left:18px;font-size:13px;color:var(--ink-soft);}
+  .door .go{display:inline-block;margin-top:18px;font-size:14px;font-weight:600;color:var(--primary);}
+  .wide{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;background:var(--primary-soft);border-radius:var(--radius);padding:20px 24px;text-decoration:none;color:inherit;border:1px solid transparent;}
+  .wide:hover{border-color:var(--primary);}
+  .wide b{font-size:15px;}
+  .wide span{font-size:13px;color:var(--ink-soft);}
+  .note{margin-top:36px;font-size:11.5px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="doc-eyebrow">Платформа проверки компетенций</div>
+  <h1>Проверка компетенций в информационной безопасности</h1>
+  <p class="lead">Тестирование, практическое задание и проверка сертификатов по пяти действующим профессиональным стандартам Минтруда России в области ИБ.</p>
+
+  <div class="doors">
+    <a class="door" href="test_flow.html">
+      <div class="door-kicker">Кандидат или сотрудник</div>
+      <h2>Личный кабинет</h2>
+      <p>Регистрация по ФИО, телефону и email — затем проверка по выбранному профстандарту.</p>
+      <ul>
+        <li>самооценка, тестирование, практическое задание</li>
+        <li>автоматическая проверка сертификатов (Credly, Cisco, CompTIA, ISC2, AWS…)</li>
+        <li>поиск публичных профилей на ИБ-платформах</li>
+      </ul>
+      <span class="go">Войти или зарегистрироваться →</span>
+    </a>
+    <a class="door" href="reviewer_dashboard.html">
+      <div class="door-kicker">Ревьюер</div>
+      <h2>Панель ревьюера</h2>
+      <p>Вход только для ревьюеров, учётные записи выдаёт администратор.</p>
+      <ul>
+        <li>оценка практических заданий по рубрике</li>
+        <li>результаты теста по темам требований</li>
+        <li>сертификаты и OSINT-профили кандидата, ручное подтверждение</li>
+      </ul>
+      <span class="go">Войти как ревьюер →</span>
+    </a>
+  </div>
+
+  <a class="wide" href="requirements.html">
+    <div><b>Требования к должностям</b><br/><span>Что нужно знать и уметь: по должности, теме (VPN, сети, криптография…), компетенции или навыку — без входа.</span></div>
+    <span>Открыть справочник →</span>
+  </a>
+
+  <div class="note">Профстандарты: 06.030, 06.032, 06.033, 06.034, 06.053 (реестр Минтруда, группа 06).</div>
+</div>
+</body>
+</html>

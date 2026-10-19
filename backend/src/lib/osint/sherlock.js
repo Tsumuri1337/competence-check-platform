@@ -5,12 +5,14 @@ const { execFile } = require("child_process");
 // ограничив список сайтами, значимыми для ИБ-специалиста: платформы
 // практики (HTB, THM, CryptoHack), баг-баунти, код, профили сертификатов.
 // Установка: `pipx install sherlock-project` (или pip). Путь к бинарнику —
-// SHERLOCK_BIN (по умолчанию "sherlock" из PATH); если его нет, OSINT
+// SHERLOCK_BIN (по умолчанию "sherlock" из PATH); сайты с частыми ложными
+// срабатываниями (например, Reddit) из списка исключены, но и остальные
+// результаты — «возможные» профили, ревьюер открывает их перед выводами; если его нет, OSINT
 // продолжается без Sherlock, а в отчёте помечается, что он недоступен.
 const SECURITY_SITES = [
   "GitHub", "GitLab", "BitBucket", "HackTheBox", "TryHackMe", "HackerOne", "BugCrowd", "HackenProof (Hackers)",
   "PentesterLab", "CryptoHack", "Credly", "AWS Skills Profile", "Docker Hub", "Keybase", "LeetCode", "Codeforces",
-  "HackerRank", "Kaggle", "Medium", "habr", "Career.habr", "LinkedIn", "Telegram", "Reddit", "PyPi", "npm",
+  "HackerRank", "Kaggle", "Medium", "habr", "Career.habr", "LinkedIn", "Telegram", "PyPi", "npm",
 ];
 
 const RUN_TIMEOUT_MS = 180000;

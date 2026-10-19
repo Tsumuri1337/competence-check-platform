@@ -87,15 +87,19 @@ test("registration runs OSINT: Sherlock profiles + Credly badges verified by ema
   assert.equal(byName["Random Badge"].status, "owner_mismatch");
 });
 
-test("a Credly profile guessed from the name keeps only badges proven to be the candidate's", async () => {
+test("a Credly profile guessed from the name keeps only badges proven by email — a namesake's badges are dropped even when the name matches", async () => {
   const email = uniqueEmail("osint-guess");
   emails.push(email);
-  const stamp = Date.now().toString(36);
+  // Уникальная фамилия латиницей-в-кириллице, чтобы slug не пересекался между прогонами,
+  // а имя получателя у бейджа однофамильца ПОЛНОСТЬЮ совпадало с ФИО кандидата.
+  const stamp = Date.now().toString().slice(-6).replace(/\d/g, (d) => "абвгдежзик"[d]);
   const fullName = `Сидоров${stamp} Пётр`;
   const [slug] = nameSlugs(fullName);
+  const latinName = slug.split("-").map((p) => p[0].toUpperCase() + p.slice(1)).join(" ");
+  assert.ok(namesMatch(latinName, fullName), "precondition: the namesake's name must match");
   fakeCredly.addProfile(slug, [
-    { name: "AWS Certified Security – Specialty", issuer: "Amazon Web Services Training and Certification", issuedTo: "Petr Sidorov", recipientEmail: email },
-    { name: "CISSP", issuer: "ISC2", issuedTo: "Petr Sidorov", recipientEmail: "namesake@example.com" },
+    { name: "AWS Certified Security – Specialty", issuer: "Amazon Web Services Training and Certification", issuedTo: latinName, recipientEmail: email },
+    { name: "CISSP", issuer: "ISC2", issuedTo: latinName, recipientEmail: "namesake@example.com" },
   ]);
   const { cookie } = await registerPerson(baseUrl, { email, fullName });
   await waitForOsintIdle();
@@ -176,4 +180,19 @@ test("OSINT still completes when the Sherlock binary is missing", async () => {
   } finally {
     process.env.SHERLOCK_BIN = previous;
   }
+});
+
+test("a re-run drops Credly badges that are no longer found, unless a reviewer decided on them", async () => {
+  const { runOsint } = require("../src/lib/osint");
+  const email = uniqueEmail("osint-stale");
+  emails.push(email);
+  const username = `found-stale-${Date.now()}`;
+  fakeCredly.addProfile(username, [{ name: "CCNA", issuer: "Cisco", issuedTo: "Stale Person", recipientEmail: email }]);
+  const { cookie, id } = await registerPerson(baseUrl, { email, fullName: "Устаревший Бейдж", osintUsername: username });
+  await waitForOsintIdle();
+  assert.equal((await me(cookie)).certificates.length, 1);
+
+  fakeCredly.addProfile(username, []); // профиль опустел
+  await runOsint(id, { trigger: "candidate" });
+  assert.equal((await me(cookie)).certificates.length, 0);
 });

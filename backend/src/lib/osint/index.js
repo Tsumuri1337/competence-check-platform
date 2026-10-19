@@ -44,13 +44,15 @@ async function classifyBadge(badge, person, explicit) {
   if (assertion && credly.recipientMatchesEmail(assertion.recipient, person.email)) {
     return { status: "verified", detail: "Email получателя бейджа совпал с email кандидата (Open Badges, Credly)" };
   }
+  // Профиль, угаданный по ФИО (ivan-petrov), почти наверняка чей-то ещё:
+  // совпадение имени там ничего не доказывает, засчитываем только по email.
+  if (!explicit) return null;
   if (badge.issuedTo && namesMatch(badge.issuedTo, person.fullName)) {
     return {
       status: "probable",
       detail: `Имя получателя «${badge.issuedTo}» совпадает с ФИО, но бейдж выдан на другой email — нужна ручная проверка`,
     };
   }
-  if (!explicit) return null; // угаданный по ФИО профиль без совпадений — скорее однофамилец, не сохраняем
   return {
     status: "owner_mismatch",
     detail: badge.issuedTo ? `Бейдж выдан на имя «${badge.issuedTo}», не совпадает с ФИО кандидата` : "Не удалось подтвердить получателя",
@@ -87,6 +89,14 @@ async function scanCredly(person, usernames) {
 }
 
 async function saveCredlyBadges(personId, badges) {
+  // Бейджи прошлых запусков, которых больше нет в выдаче (кандидат сменил ник,
+  // профиль стал приватным, поменялись правила), удаляем — кроме тех, по
+  // которым уже решил ревьюер.
+  await db.query(
+    `DELETE FROM certificates WHERE person_id = $1 AND source = 'credly' AND reviewed_by IS NULL
+     AND NOT (external_id = ANY($2))`,
+    [personId, badges.map((b) => b.id)]
+  );
   for (const b of badges) {
     // Решение ревьюера (reviewed_by) не перетираем повторным OSINT-запуском.
     await db.query(
