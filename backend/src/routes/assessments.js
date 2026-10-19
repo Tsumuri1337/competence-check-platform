@@ -37,7 +37,11 @@ async function ensureQuizAssignment(assessment) {
   const { rows } = await db.query("SELECT id FROM quiz_questions WHERE standard_id = $1", [assessment.standard_id]);
   const questionIds = shuffle(rows.map((r) => r.id)).slice(0, QUIZ_SIZE);
   const assignment = questionIds.map((questionId) => ({ questionId, optionOrder: shuffle([0, 1, 2, 3]) }));
-  await db.query("UPDATE assessments SET quiz_assignment = $1 WHERE id = $2", [JSON.stringify(assignment), assessment.id]);
+  // quiz_started_at — верхняя граница суммарного времени ответов (см. submitQuizResponses).
+  await db.query("UPDATE assessments SET quiz_assignment = $1, quiz_started_at = now() WHERE id = $2", [
+    JSON.stringify(assignment),
+    assessment.id,
+  ]);
   return assignment;
 }
 
@@ -110,10 +114,30 @@ async function getQuiz(req, res) {
   res.json(result);
 }
 
+// Время ответа приходит от клиента (сколько вопрос был на экране), поэтому
+// сервер его ограничивает: не больше MAX_ANSWER_MS на вопрос, а сумма — не
+// больше реально прошедшего с выдачи теста (иначе пропорционально ужимается).
+const MAX_ANSWER_MS = 10 * 60 * 1000;
+
+function sanitizeTimes(responses, startedAt) {
+  const times = responses.map((r) =>
+    Number.isFinite(r.timeMs) && r.timeMs >= 0 ? Math.min(Math.round(r.timeMs), MAX_ANSWER_MS) : null
+  );
+  const known = times.filter((t) => t !== null);
+  if (!known.length || !startedAt) return times;
+  const elapsed = Date.now() - new Date(startedAt).getTime() + 5000;
+  const sum = known.reduce((a, b) => a + b, 0);
+  if (sum <= elapsed) return times;
+  const k = elapsed / sum;
+  return times.map((t) => (t === null ? null : Math.round(t * k)));
+}
+
 // POST /api/assessments/:id/quiz-responses
-// body: { responses: [{ questionId, selectedIndex }] } — selectedIndex is
+// body: { responses: [{ questionId, selectedIndex, timeMs? }] } — selectedIndex is
 // relative to the shuffled options this assessment was shown; translated
 // back to the question's canonical option order before scoring/storing.
+// Отправить ответы можно один раз: результат кандидат видит сразу, и
+// повторная отправка позволила бы «исправить» неверные ответы.
 async function submitQuizResponses(req, res) {
   const assessmentId = Number(req.params.id);
   const { responses } = req.body || {};
@@ -122,13 +146,21 @@ async function submitQuizResponses(req, res) {
     return;
   }
 
-  const assessment = await loadOwnedAssessment(req, res, "id, quiz_assignment");
+  const assessment = await loadOwnedAssessment(req, res, "id, quiz_assignment, quiz_started_at, quiz_submitted_at");
   if (!assessment) return;
+  if (assessment.quiz_submitted_at) {
+    res.status(409).json({ error: "Ответы теста уже отправлены — изменить их нельзя" });
+    return;
+  }
+  const times = sanitizeTimes(responses, assessment.quiz_started_at);
   const optionOrderByQuestion = new Map((assessment.quiz_assignment || []).map((a) => [a.questionId, a.optionOrder]));
 
   const score = await db.transaction(async (client) => {
+    // Блокировка строки — две одновременные отправки не пройдут обе.
+    const locked = await client.query("SELECT quiz_submitted_at FROM assessments WHERE id = $1 FOR UPDATE", [assessmentId]);
+    if (locked.rows[0].quiz_submitted_at) return null;
     let correctCount = 0;
-    for (const r of responses) {
+    for (const [i, r] of responses.entries()) {
       const optionOrder = optionOrderByQuestion.get(r.questionId);
       if (!optionOrder) continue; // вопрос не входит в выборку этой проверки
       const canonicalIndex = optionOrder[r.selectedIndex];
@@ -138,14 +170,19 @@ async function submitQuizResponses(req, res) {
       const isCorrect = question.correct_index === canonicalIndex;
       if (isCorrect) correctCount += 1;
       await client.query(
-        `INSERT INTO quiz_responses (assessment_id, question_id, selected_index, is_correct)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (assessment_id, question_id) DO UPDATE SET selected_index = $3, is_correct = $4`,
-        [assessmentId, r.questionId, canonicalIndex, isCorrect]
+        `INSERT INTO quiz_responses (assessment_id, question_id, selected_index, is_correct, time_ms)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (assessment_id, question_id) DO UPDATE SET selected_index = $3, is_correct = $4, time_ms = $5`,
+        [assessmentId, r.questionId, canonicalIndex, isCorrect, times[i]]
       );
     }
+    await client.query("UPDATE assessments SET quiz_submitted_at = now() WHERE id = $1", [assessmentId]);
     return { correctCount, total: responses.length };
   });
+  if (!score) {
+    res.status(409).json({ error: "Ответы теста уже отправлены — изменить их нельзя" });
+    return;
+  }
 
   res.json({ assessmentId, ...score });
 }
@@ -178,6 +215,14 @@ async function submitPracticalSubmission(req, res) {
   const assessment = await loadOwnedAssessment(req, res, "id, standard_id, task_assignment");
   if (!assessment) return;
   const assignedTaskIds = await ensureTaskAssignment(assessment);
+  const reviewed = await db.query(
+    "SELECT 1 FROM practical_submissions WHERE assessment_id = $1 AND task_id = $2 AND reviewer_score IS NOT NULL",
+    [assessmentId, taskId]
+  );
+  if (reviewed.rows[0]) {
+    res.status(409).json({ error: "Решение уже оценено ревьюером — изменить его нельзя" });
+    return;
+  }
 
   const submissionId = await db.transaction(async (client) => {
     const inserted = await client.query(

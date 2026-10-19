@@ -4,6 +4,8 @@ const { resolveReviewerFromSession } = require("./auth");
 const { decrypt } = require("../lib/pii");
 const { listCertificates, osintView } = require("./people");
 const { startOsintInBackground, latestRun } = require("../lib/osint");
+const { computeScore } = require("../lib/scoring");
+const { generateAiSummary, latestAiSummary, AiSummaryError } = require("../lib/aiSummary");
 
 function decryptPerson(row) {
   return { ...row, full_name: decrypt(row.full_name), email: decrypt(row.email) };
@@ -48,7 +50,17 @@ async function listAssessments(req, res) {
   sql += " ORDER BY a.created_at DESC";
 
   const { rows } = await db.query(sql, args);
-  res.json(rows.map(decryptPerson));
+  // Итоговый балл в списке — чтобы сортировать/сравнивать кандидатов, не
+  // открывая каждый отчёт.
+  const scores = await Promise.all(rows.map((r) => computeScore(r.id)));
+  res.json(
+    rows.map((r, i) => ({
+      ...decryptPerson(r),
+      score_total: scores[i] ? scores[i].total : null,
+      score_provisional: scores[i] ? scores[i].provisional : true,
+      score_grade: scores[i] && scores[i].grade ? scores[i].grade.title : null,
+    }))
+  );
 }
 
 // GET /api/assessments/:id/report — сводный отчёт: квиз + практическое
@@ -76,7 +88,7 @@ async function getAssessmentReport(req, res) {
   assessment.phone = assessment.phone ? decrypt(assessment.phone) : null;
   assessment.osint_username = assessment.osint_username ? decrypt(assessment.osint_username) : null;
 
-  const [quiz, submissions, ratings, certificates, osintRun, topicBreakdown] = await Promise.all([
+  const [quiz, submissions, ratings, certificates, osintRun, topicBreakdown, score, aiSummary] = await Promise.all([
     db.query(
       `SELECT qr.question_id, qr.selected_index, qr.is_correct, qq.text
        FROM quiz_responses qr JOIN quiz_questions qq ON qq.id = qr.question_id
@@ -111,6 +123,8 @@ async function getAssessmentReport(req, res) {
        ORDER BY t.sort_order`,
       [assessmentId]
     ),
+    computeScore(assessmentId),
+    latestAiSummary(assessmentId),
   ]);
 
   await logAccess(reviewer.id, assessmentId, "view_report");
@@ -142,6 +156,8 @@ async function getAssessmentReport(req, res) {
     certificates,
     osint: osintView(osintRun),
     topicBreakdown: topicBreakdown.rows,
+    score,
+    aiSummary,
   });
 }
 
@@ -264,7 +280,28 @@ async function reviewCertificate(req, res) {
   res.json({ ok: true, status });
 }
 
+// POST /api/assessments/:id/ai-summary — сформировать AI-резюме кандидата
+// (Claude; занимает до минуты). Каждый вызов — платный запрос к API, поэтому
+// только по кнопке ревьюера, а не автоматически.
+async function createAiSummary(req, res) {
+  const reviewer = await requireReviewer(req, res);
+  if (!reviewer) return;
+  const assessmentId = Number(req.params.id);
+  try {
+    const summary = await generateAiSummary(assessmentId, reviewer.id);
+    await logAccess(reviewer.id, assessmentId, "ai_summary");
+    res.status(201).json({ aiSummary: summary, score: await computeScore(assessmentId) });
+  } catch (e) {
+    if (e instanceof AiSummaryError) {
+      res.status(e.status).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+}
+
 module.exports = {
+  createAiSummary,
   listAssessments,
   getAssessmentReport,
   scorePracticalSubmission,

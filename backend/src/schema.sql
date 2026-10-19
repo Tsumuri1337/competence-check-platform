@@ -266,3 +266,27 @@ CREATE TABLE IF NOT EXISTS quiz_question_topics (
   topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
   PRIMARY KEY (quiz_question_id, topic_id)
 );
+
+-- ===== Итоговая оценка и AI-резюме =====
+-- Время ответа на каждый вопрос (мс, со стороны клиента, ограничивается
+-- сервером) и моменты начала/отправки теста — для компонента «темп»
+-- итоговой оценки (src/lib/scoring.js). quiz_submitted_at также запрещает
+-- повторную отправку ответов после того, как кандидат увидел свой результат.
+ALTER TABLE quiz_responses ADD COLUMN IF NOT EXISTS time_ms INTEGER;
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS quiz_started_at TIMESTAMPTZ;
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS quiz_submitted_at TIMESTAMPTZ;
+
+-- AI-резюме кандидата (src/lib/aiSummary.js): структурированный ответ модели
+-- хранится целиком; каждое формирование — новая строка (история сохраняется).
+CREATE TABLE IF NOT EXISTS ai_summaries (
+  id SERIAL PRIMARY KEY,
+  assessment_id INTEGER NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
+  reviewer_id INTEGER REFERENCES reviewers(id),
+  model TEXT NOT NULL,
+  content JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ai_summaries_assessment ON ai_summaries(assessment_id, created_at DESC);
+-- Проверки, отправившие тест до появления quiz_submitted_at, считаем отправленными.
+UPDATE assessments a SET quiz_submitted_at = a.created_at
+WHERE a.quiz_submitted_at IS NULL AND EXISTS (SELECT 1 FROM quiz_responses r WHERE r.assessment_id = a.id);

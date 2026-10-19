@@ -544,6 +544,12 @@
   let practicalTasks = [];
   let selfAssessmentItems = [];
   let quizScore = null;
+  // Время на каждый вопрос (мс): сколько вопрос был на экране, пока вкладка
+  // видима. Идёт в итоговую оценку как сигнал «мгновенного угадывания»;
+  // сервер сверяет сумму с реально прошедшим временем.
+  let quizTimes = [];
+  let questionShownAt = null;
+  let timedIndex = null;
   let currentPerson = null;
   let catalog = [];
   let osintPollTimer = null;
@@ -580,7 +586,7 @@
   function saveProgress(step){
     try {
       if (!assessmentId) return;
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ assessmentId, step, quizScore, quizAnswers, currentQuizIndex }));
+      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ assessmentId, step, quizScore, quizAnswers, currentQuizIndex, quizTimes }));
     } catch (e) { /* localStorage недоступен — просто не восстанавливаемся */ }
   }
   function loadSavedProgress(){
@@ -1121,15 +1127,35 @@
     quizQuestions = await res.json();
     if (savedState && Array.isArray(savedState.quizAnswers) && savedState.quizAnswers.length === quizQuestions.length) {
       quizAnswers = savedState.quizAnswers;
+      quizTimes = Array.isArray(savedState.quizTimes) ? savedState.quizTimes : quizQuestions.map(() => 0);
       currentQuizIndex = Math.min(savedState.currentQuizIndex || 0, quizQuestions.length - 1);
     } else {
       quizAnswers = quizQuestions.map(() => null);
+      quizTimes = quizQuestions.map(() => 0);
       currentQuizIndex = 0;
     }
     renderQuizQuestion();
   }
 
+  function stopQuestionTimer(){
+    if (questionShownAt === null || timedIndex === null) return;
+    quizTimes[timedIndex] = (quizTimes[timedIndex] || 0) + (Date.now() - questionShownAt);
+    questionShownAt = null;
+  }
+  function startQuestionTimer(){
+    stopQuestionTimer();
+    timedIndex = currentQuizIndex;
+    questionShownAt = document.hidden ? null : Date.now();
+  }
+  document.addEventListener("visibilitychange", () => {
+    const onQuestion = !document.getElementById("step-2").classList.contains("hidden")
+      && !document.getElementById("quiz-question").classList.contains("hidden");
+    if (document.hidden) stopQuestionTimer();
+    else if (onQuestion && timedIndex !== null) questionShownAt = Date.now();
+  });
+
   function renderQuizQuestion(){
+    startQuestionTimer();
     document.getElementById("quiz-nav-review").classList.add("hidden");
     document.getElementById("quiz-nav-questions").classList.remove("hidden");
     document.getElementById("quiz-review").classList.add("hidden");
@@ -1163,6 +1189,7 @@
   }
 
   function renderQuizReview(){
+    stopQuestionTimer();
     document.getElementById("quiz-question").classList.add("hidden");
     document.getElementById("quiz-nav-questions").classList.add("hidden");
     document.getElementById("quiz-nav-review").classList.remove("hidden");
@@ -1218,7 +1245,8 @@
       return;
     }
 
-    const responses = quizQuestions.map((q, i) => ({ questionId: q.id, selectedIndex: quizAnswers[i] }));
+    stopQuestionTimer();
+    const responses = quizQuestions.map((q, i) => ({ questionId: q.id, selectedIndex: quizAnswers[i], timeMs: quizTimes[i] || null }));
 
     try {
       const res = await fetch(`${API_BASE}/api/assessments/${assessmentId}/quiz-responses`, {

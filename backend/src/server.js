@@ -20,6 +20,7 @@ const {
   setDecision,
   rerunOsintForAssessment,
   reviewCertificate,
+  createAiSummary,
 } = require("./routes/reviewers");
 const { login, logout, me, changePassword } = require("./routes/auth");
 const people = require("./routes/people");
@@ -86,6 +87,7 @@ app.post("/api/assessments/:assessmentId/practical-submissions/:submissionId/sco
 app.post("/api/assessments/:id/decision", setDecision);
 app.post("/api/assessments/:id/osint", rerunOsintForAssessment);
 app.post("/api/assessments/:id/certificates/:certId/review", reviewCertificate);
+app.post("/api/assessments/:id/ai-summary", createAiSummary);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Маршрут не найден" });
