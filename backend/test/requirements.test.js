@@ -82,3 +82,37 @@ test("every topic referenced by the certification catalog exists in topics.json"
   const known = new Set(loadTopics().topics.map((t) => t.slug));
   for (const c of certifications) for (const t of c.topics) assert.ok(known.has(t), `${c.id}: unknown topic ${t}`);
 });
+
+// Покрытие тематического индекса: если правила в topics.json перестанут
+// находить темы для вопросов теста или пунктов стандартов (новые вопросы,
+// правка правил), тест упадёт, а не тихо выпадут области из вкладки
+// «Требования» и из разбивки результатов по темам.
+const MIN_TOPIC_COVERAGE = 0.95;
+
+test(`at least ${MIN_TOPIC_COVERAGE * 100}% of quiz questions and of knowledge/skill items have a topic`, async () => {
+  const { rows } = await pool.query(`
+    SELECT
+      (SELECT count(*) FROM quiz_questions)::int AS questions,
+      (SELECT count(DISTINCT quiz_question_id) FROM quiz_question_topics)::int AS tagged_questions,
+      (SELECT count(*) FROM competency_items)::int AS items,
+      (SELECT count(DISTINCT competency_item_id) FROM competency_item_topics)::int AS tagged_items`);
+  const r = rows[0];
+  assert.ok(r.tagged_questions / r.questions >= MIN_TOPIC_COVERAGE, `questions with a topic: ${r.tagged_questions}/${r.questions}`);
+  assert.ok(r.tagged_items / r.items >= MIN_TOPIC_COVERAGE, `items with a topic: ${r.tagged_items}/${r.items}`);
+});
+
+test("every topic is used by the standards or by the test — no empty topics", async () => {
+  const { rows } = await pool.query(`
+    SELECT t.slug FROM topics t
+    WHERE NOT EXISTS (SELECT 1 FROM competency_item_topics x WHERE x.topic_id = t.id)
+      AND NOT EXISTS (SELECT 1 FROM quiz_question_topics x WHERE x.topic_id = t.id)`);
+  assert.deepEqual(rows.map((r) => r.slug), []);
+});
+
+test("every competence (labor function) has knowledge/skill items and at least one quiz question", async () => {
+  const { rows } = await pool.query(`
+    SELECT lf.code FROM labor_functions lf
+    WHERE NOT EXISTS (SELECT 1 FROM competency_items ci WHERE ci.labor_function_id = lf.id)
+       OR NOT EXISTS (SELECT 1 FROM quiz_questions q WHERE q.labor_function_id = lf.id)`);
+  assert.deepEqual(rows.map((r) => r.code), []);
+});

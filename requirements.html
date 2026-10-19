@@ -63,6 +63,7 @@
   .chip{font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line-strong);background:#fff;color:var(--ink);text-decoration:none;cursor:pointer;font-family:inherit;}
   .chip:hover{border-color:var(--accent);background:var(--accent-soft);}
   .chip .n{color:var(--ink-soft);margin-left:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .chip.test-only{border-style:dashed;}
   .chip.cert{background:var(--success-soft);border-color:#cfdcc8;}
 
   .cat{margin-bottom:20px;}
@@ -215,7 +216,10 @@
     ? `<div class="chips">${certs.map(c => `<span class="chip cert" title="${esc(c.verify.hint)}">${esc(c.vendorTitle)} ${esc(c.name)}</span>`).join("")}</div>`
     : '<div class="muted">Нет сертификатов в каталоге по этим темам.</div>';
   const topicChips = (list, extra = {}) => `<div class="chips">${list.map(t =>
-    `<a class="chip" href="#" ${link({ topic: t.slug, ...extra })}>${esc(t.title)}${t.count ? `<span class="n">${t.count}</span>` : ""}</a>`).join("")}</div>`;
+    `<a class="chip ${t.testOnly ? "test-only" : ""}" href="#" ${link({ topic: t.slug, ...extra })} ${t.testOnly ? 'title="Есть в тесте, но не названа в профстандартах"' : ""}>${esc(t.title)}${t.testOnly ? '<span class="n">только в тесте</span>' : t.count ? `<span class="n">${t.count}</span>` : ""}</a>`).join("")}</div>`;
+  // Тема, по которой есть вопросы теста, но нет ни одного пункта стандартов
+  // (облака, антифрод): стандарты эти технологии прямо не называют.
+  const isTestOnly = (t) => t && t.itemCount === 0 && t.questionCount > 0;
 
   function itemRow(i){
     return `<div class="item" ${link({ item: i.id })}>${kindBadge(i.kind)}<span class="item-text">${esc(i.text)}</span>${i.sharedTopics && i.sharedTopics.length ? `<span class="shared">общие темы: ${esc(i.sharedTopics.join(", "))}</span>` : ""}</div>`;
@@ -282,10 +286,10 @@
     const list = `
       <div class="card">
         <h2 class="card-title">Все темы</h2>
-        <p class="card-sub">Число — сколько знаний и умений по теме во всех пяти стандартах.</p>
+        <p class="card-sub">Число — сколько знаний и умений по теме во всех пяти стандартах. «Только в тесте» — тема есть в вопросах тестирования, но в тексте профстандартов прямо не названа.</p>
         ${[...grouped.entries()].map(([cat, ts]) => `
           <div class="cat"><div class="cat-title">${esc(cat)}</div>
-          ${topicChips(ts.map(t => ({ slug: t.slug, title: t.title, count: t.itemCount })))}</div>`).join("")}
+          ${topicChips(ts.map(t => ({ slug: t.slug, title: t.title, count: t.itemCount, testOnly: isTestOnly(t) })))}</div>`).join("")}
       </div>`;
     if (!slug) { view.innerHTML = list; return; }
 
@@ -322,7 +326,9 @@
                 ${lf.skills.map(i => itemRow({ ...i, kind: "skill" })).join("")}
               </div>
             </div>`).join("")}
-        </div>`).join("") : '<div class="card"><div class="muted">В выбранной должности пунктов по этой теме нет.</div></div>'}
+        </div>`).join("") : `<div class="card"><div class="muted">${isTestOnly(summary)
+          ? `Эта тема есть в тестировании (${topic.questionCount} вопр.), но ни один профстандарт не называет её прямо — вопросы проверяют современную практику, на которую опираются общие требования стандартов (защита информации в информационных системах, противодействие атакам).`
+          : "В выбранной должности пунктов по этой теме нет."}</div></div>`}
       ${list}`;
   }
 
