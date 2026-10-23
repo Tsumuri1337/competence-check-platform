@@ -27,14 +27,14 @@ function runs(text, base = {}) {
   if (last < text.length) out.push(new TextRun({ text: text.slice(last), ...base }));
   return out;
 }
-const P = (t, o = {}) => new Paragraph({ children: runs(t), alignment: AlignmentType.JUSTIFIED, indent: { firstLine: 709 }, spacing: { after: 80, line: 288 }, ...o });
+const P = (t, o = {}) => new Paragraph({ children: runs(t), alignment: AlignmentType.JUSTIFIED, indent: { firstLine: 709 }, spacing: { after: 0, line: 360 }, ...o });
 const heads = [];
 const H1 = (t) => (heads.push([1, t]), new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(t)], pageBreakBefore: true }));
 const H1c = (t) => (heads.push([1, t]), new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(t)] }));
 const H2 = (t) => (heads.push([2, t]), new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(t)] }));
 const H3 = (t) => new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun(t)] });
-const UL = (items) => items.map((t) => new Paragraph({ children: runs(t), numbering: { reference: "bul", level: 0 }, alignment: AlignmentType.JUSTIFIED, spacing: { after: 40, line: 276 } }));
-const OL = (ref, items) => items.map((t) => new Paragraph({ children: runs(t), numbering: { reference: ref, level: 0 }, alignment: AlignmentType.JUSTIFIED, spacing: { after: 40, line: 276 } }));
+const UL = (items) => items.map((t) => new Paragraph({ children: runs(t), numbering: { reference: "bul", level: 0 }, alignment: AlignmentType.JUSTIFIED, spacing: { after: 0, line: 360 } }));
+const OL = (ref, items) => items.map((t) => new Paragraph({ children: runs(t), numbering: { reference: ref, level: 0 }, alignment: AlignmentType.JUSTIFIED, spacing: { after: 0, line: 360 } }));
 const PB = () => new Paragraph({ children: [new PageBreak()] });
 
 let figNo = 0, tabNo = 0;
@@ -51,7 +51,7 @@ function FIG(file, caption, page, opts = {}) {
   return [
     new Paragraph({ alignment: AlignmentType.CENTER, keepNext: true, spacing: { before: 120, after: 60 },
       children: [new ImageRun({ type: "png", data: fs.readFileSync(file), transformation: { width: Math.round(w * k), height: Math.round(h * k) } })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: `Рисунок ${figNo} — ${caption}`, size: 22 })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: `Рисунок ${figNo} — ${caption}`, size: 28 })] }),
   ];
 }
 
@@ -71,7 +71,7 @@ function FIG2(base, caption, page) {
   return [
     new Table({ width: { size: total, type: WidthType.DXA }, columnWidths: [wa, total - wa], borders: { ...nbs, insideHorizontal: nb, insideVertical: nb },
       rows: [new TableRow({ cantSplit: true, children: [cell(fa, a, wa), cell(fb, b, total - wa)] })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 200 }, children: [new TextRun({ text: `Рисунок ${figNo} — ${caption}`, size: 22 })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 200 }, children: [new TextRun({ text: `Рисунок ${figNo} — ${caption}`, size: 28 })] }),
   ];
 }
 const D = (n) => path.join(__dirname, "diagrams", n + ".png");
@@ -85,19 +85,21 @@ function TBL(caption, headers, rows, fr, page) {
   const sum = fr.reduce((a, b) => a + b, 0);
   const widths = fr.map((f) => Math.floor((total * f) / sum));
   widths[widths.length - 1] += total - widths.reduce((a, b) => a + b, 0);
-  const cell = (t, i, head) => new TableCell({
+  // Небольшие таблицы не разрываются между страницами (keepNext во всех строках, кроме последней).
+  const keep = rows.length <= 12;
+  const cell = (t, i, head, last) => new TableCell({
     borders, width: { size: widths[i], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP,
     margins: { top: 50, bottom: 50, left: 90, right: 90 },
     shading: head ? { fill: "E4E4E4", type: ShadingType.CLEAR, color: "auto" } : undefined,
-    children: String(t).split("\n").map((line) => new Paragraph({ spacing: { after: 0, line: 252 }, children: runs(line, { size: 20, bold: head || undefined }) })),
+    children: String(t).split("\n").map((line) => new Paragraph({ keepNext: keep && !last, spacing: { after: 0, line: 240 }, children: runs(line, { size: 24, bold: head || undefined }) })),
   });
   return [
-    new Paragraph({ keepNext: true, spacing: { before: 160, after: 60 }, children: [new TextRun({ text: `Таблица ${tabNo} — ${caption}`, size: 22 })] }),
+    new Paragraph({ keepNext: true, spacing: { before: 160, after: 60 }, children: [new TextRun({ text: `Таблица ${tabNo} — ${caption}`, size: 28 })] }),
     new Table({
       width: { size: total, type: WidthType.DXA }, columnWidths: widths,
       rows: [
         new TableRow({ tableHeader: true, children: headers.map((h, i) => cell(h, i, true)) }),
-        ...rows.map((r) => new TableRow({ cantSplit: true, children: r.map((t, i) => cell(t, i, false)) })),
+        ...rows.map((r, ri) => new TableRow({ cantSplit: true, children: r.map((t, i) => cell(t, i, false, ri === rows.length - 1)) })),
       ],
     }),
     new Paragraph({ spacing: { after: 120 }, children: [] }),
@@ -538,11 +540,11 @@ const toc = [
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, children: [new TextRun({ text: "СОДЕРЖАНИЕ", bold: true, size: 28 })] }),
   ...heads.map(([lvl, t]) => new Paragraph({ spacing: { after: 40 }, indent: { left: lvl === 2 ? 400 : 0 },
     tabStops: [{ type: TabStopType.RIGHT, position: 9355, leader: LeaderType.DOT }],
-    children: [new TextRun({ text: t.replace(/^([А-ЯЁ ]+)$/, (m) => m), size: 24 }), new TextRun({ text: "\t" + (tocPages[t] || "0"), size: 24 })] })),
+    children: [new TextRun({ text: t, size: 28 }), new TextRun({ text: "\t" + (tocPages[t] || "0"), size: 28 })] })),
 ];
 
 // ---------- документ ----------
-const footer = new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: [PageNumber.CURRENT], size: 20 })] })] });
+const footer = new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: [PageNumber.CURRENT], size: 28 })] })] });
 const port = { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1701, right: 850 } } };
 const land = { page: { size: { width: 11906, height: 16838, orientation: PageOrientation.LANDSCAPE }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } };
 const sec = (props, children, extra = {}) => ({ properties: { ...props, ...extra }, footers: { default: footer }, children });
@@ -551,11 +553,11 @@ const doc = new Document({
   creator: "Проект «Проверка компетенций»",
   title: "Пояснительная записка к концепции платформы проверки компетенций",
   styles: {
-    default: { document: { run: { font: FONT, size: 24 } } },
+    default: { document: { run: { font: FONT, size: 28 } } },
     paragraphStyles: [
       { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 28, bold: true, font: FONT }, paragraph: { spacing: { before: 240, after: 200 }, alignment: AlignmentType.LEFT, outlineLevel: 0, keepNext: true } },
-      { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 26, bold: true, font: FONT }, paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 1, keepNext: true } },
-      { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 24, bold: true, font: FONT }, paragraph: { spacing: { before: 160, after: 80 }, outlineLevel: 2, keepNext: true } },
+      { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 28, bold: true, font: FONT }, paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 1, keepNext: true } },
+      { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 28, bold: true, font: FONT }, paragraph: { spacing: { before: 160, after: 80 }, outlineLevel: 2, keepNext: true } },
     ],
   },
   numbering: {
