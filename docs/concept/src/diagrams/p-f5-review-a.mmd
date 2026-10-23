@@ -1,0 +1,20 @@
+flowchart TB
+  A@{ shape: stadium, label: "Начало" }
+  B@{ shape: lean-r, label: "Вывод карточки кандидата:\nоценка, темы, сертификаты, ответы" }
+  C@{ shape: diam, label: "Нужно\nAI-резюме?" }
+  D@{ shape: diam, label: "Настроен\nключ API?" }
+  E@{ shape: fr-rect, label: "Запрос к модели\n(обезличенные данные)" }
+  F[Копирование обезличенного\nзапроса в чат-ассистент]
+  G@{ shape: sl-rect, label: "Вставка ответа\nассистента" }
+  H@{ shape: diam, label: "Ответ соответствует\nсхеме?" }
+  I@{ shape: lean-r, label: "Сообщение: какое\nполе неверно" }
+  J@{ shape: cyl, label: "Сохранение AI-резюме" }
+  X1@{ shape: circle, label: "1" }
+  A --> B --> C
+  C -- нет --> X1
+  C -- да --> D
+  D -- да --> E --> J
+  D -- нет --> F --> G --> H
+  H -- нет --> I --> G
+  H -- да --> J
+  J --> X1

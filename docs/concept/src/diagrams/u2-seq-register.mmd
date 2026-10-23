@@ -1,0 +1,33 @@
+sequenceDiagram
+  autonumber
+  actor K as Кандидат
+  participant UI as Веб-интерфейс
+  participant API as API платформы
+  participant DB as БД (PostgreSQL)
+  participant O as Модуль OSINT
+  participant S as Sherlock
+  participant C as Credly
+  K->>UI: Заполнить форму регистрации, согласие на проверку
+  UI->>API: POST /api/people/register
+  API->>API: Проверка полей, хэш пароля (scrypt), шифрование ПДн
+  API->>DB: INSERT person, person_session
+  API-->>UI: 201 + httpOnly-кука сессии
+  UI-->>K: Личный кабинет
+  API-)O: Запуск OSINT в фоне (не блокирует ответ)
+  O->>DB: INSERT osint_run (status = running)
+  par Поиск аккаунтов
+    O->>S: sherlock <ники> --site …
+    S-->>O: Найденные профили
+  and Бейджи
+    O->>C: GET /users/{slug}/badges.json
+    C-->>O: Список бейджей
+    loop для каждого бейджа
+      O->>C: GET badge_assertions/{id}
+      C-->>O: Хэш email получателя
+    end
+  end
+  O->>DB: Сертификаты со статусами, osint_run = done
+  loop Пока поиск идёт (раз в 4 с)
+    UI->>API: GET /api/people/me
+    API-->>UI: Статус OSINT, сертификаты
+  end

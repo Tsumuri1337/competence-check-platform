@@ -1,0 +1,11 @@
+flowchart TB
+  K@{ shape: notch-pent, label: "Цикл: ситуационная\nзадача i = 1..M" }
+  L@{ shape: fr-rect, label: "Прохождение\nситуационной задачи i" }
+  M@{ shape: notch-pent, label: "Конец цикла" }
+  N@{ shape: sl-rect, label: "Развёрнутый ответ\nна кейс-задание" }
+  O[Фиксация проверки:\nстатус «Отправлена»]
+  P@{ shape: fr-rect, label: "Расчёт предварительной\nитоговой оценки" }
+  Q@{ shape: doc, label: "Результат для кандидата:\nбаллы по разделам" }
+  Z@{ shape: stadium, label: "Конец" }
+  X1@{ shape: circle, label: "1" }
+  X1 --> K --> L --> M --> N --> O --> P --> Q --> Z

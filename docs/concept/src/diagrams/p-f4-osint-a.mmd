@@ -1,0 +1,21 @@
+flowchart TB
+  A@{ shape: stadium, label: "Начало" }
+  B["Никнеймы := {указанный кандидатом,\nначало email}; slug := ник ∪ ФИО (транслит)"]
+  C@{ shape: fr-rect, label: "Sherlock: поиск аккаунтов\nна ИБ-платформах" }
+  D@{ shape: notch-pent, label: "Цикл: для каждого slug" }
+  E@{ shape: diam, label: "Профиль Credly\nнайден?" }
+  F@{ shape: notch-pent, label: "Цикл: для каждого бейджа" }
+  G[Запрос Open Badges assertion]
+  H@{ shape: diam, label: "sha256(email + соль)\n= хэш получателя?" }
+  I[Статус «подтверждён»]
+  J@{ shape: diam, label: "Профиль указан\nкандидатом?" }
+  K["Бейдж отбрасывается\n(возможный однофамилец)"]
+  X1@{ shape: circle, label: "1" }
+  X2@{ shape: circle, label: "2" }
+  A --> B --> C --> D --> E
+  E -- нет --> X2
+  E -- да --> F --> G --> H
+  H -- да --> I --> X2
+  H -- нет --> J
+  J -- нет --> K --> X2
+  J -- да --> X1

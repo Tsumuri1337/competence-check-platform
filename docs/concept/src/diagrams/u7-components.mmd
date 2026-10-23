@@ -1,0 +1,31 @@
+flowchart TB
+  classDef comp fill:#ffffff,stroke:#1b2430
+  classDef ext fill:#f3f1ec,stroke:#1b2430,stroke-dasharray:5 3
+  CL["«компонент» Веб-клиент<br/>единая оболочка, меню и бейдж по роли:<br/>Академия · Задачи · Кабинет · Ревьюер · Методист · Аналитика ОЦК"]:::comp
+  subgraph BE["«подсистема» Сервер: REST API (Node.js, Express)"]
+    AUTH["Аутентификация,<br/>сессии и роли"]:::comp
+    REQ["Справочник требований<br/>(профстандарты, темы)"]:::comp
+    TASK["Движок ситуационных<br/>задач и рубрик"]:::comp
+    ASM["Проверки<br/>и ответы"]:::comp
+    ANL["Аналитика ОЦК<br/>(только агрегаты)"]:::comp
+    SCORE["Модуль оценки<br/>(0–100)"]:::comp
+    OS["OSINT:<br/>сертификаты, профили"]:::comp
+    AIS["AI-резюме<br/>(API / ручной режим)"]:::comp
+    AUD["Журнал доступа,<br/>шифрование ПДн"]:::comp
+  end
+  DB[("PostgreSQL:<br/>контент, проверки,<br/>ПДн в зашифрованном виде")]
+  E1["Credly API"]:::ext
+  E2["Sherlock CLI"]:::ext
+  E3["Claude API /<br/>внешний чат-ассистент"]:::ext
+  CL -- "HTTPS, JSON,<br/>httpOnly-кука" --> AUTH
+  AUTH --> REQ & TASK & ASM & ANL
+  TASK --> SCORE
+  ASM --> SCORE
+  ASM --> OS
+  SCORE --> AIS
+  ASM -.-> AUD
+  AIS -.-> AUD
+  REQ & ASM & ANL --> DB
+  OS --> E1
+  OS --> E2
+  AIS --> E3

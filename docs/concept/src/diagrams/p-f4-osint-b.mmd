@@ -1,0 +1,15 @@
+flowchart TB
+  L@{ shape: diam, label: "Имя получателя\nсовпадает с ФИО?" }
+  M[Статус «вероятно»]
+  N[Статус «владелец не совпадает»]
+  O@{ shape: notch-pent, label: "Конец циклов" }
+  P[Сверка заявленных сертификатов:\nссылка Credly → проверка;\nиначе → «ручная проверка»]
+  Q@{ shape: cyl, label: "Сохранение сертификатов\nи журнала OSINT" }
+  Z@{ shape: stadium, label: "Конец" }
+  X1@{ shape: circle, label: "1" }
+  X2@{ shape: circle, label: "2" }
+  X1 --> L
+  L -- да --> M --> O
+  L -- нет --> N --> O
+  X2 --> O
+  O --> P --> Q --> Z

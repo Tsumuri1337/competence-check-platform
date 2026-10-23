@@ -1,0 +1,12 @@
+erDiagram
+  STANDARD ||--o{ GENERALIZED_FUNCTION : "содержит"
+  GENERALIZED_FUNCTION ||--o{ LABOR_FUNCTION : "содержит"
+  LABOR_FUNCTION ||--o{ COMPETENCY_ITEM : "требует"
+  COMPETENCY_ITEM }o--o{ TOPIC : "относится к"
+  LABOR_FUNCTION ||--o{ SCENARIO_TASK : "проверяется"
+  SCENARIO_TASK ||--|{ TASK_STEP : "состоит из"
+  TASK_STEP ||--o{ RUBRIC_CRITERION : "оценивается по"
+  TASK_STEP }o--o{ TOPIC : "затрагивает"
+  LABOR_FUNCTION ||--o{ QUIZ_QUESTION : "проверяется"
+  QUIZ_QUESTION }o--o{ TOPIC : "относится к"
+  CERTIFICATION }o--o{ TOPIC : "подкрепляет"

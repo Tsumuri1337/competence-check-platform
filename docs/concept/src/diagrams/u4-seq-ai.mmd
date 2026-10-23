@@ -1,0 +1,25 @@
+sequenceDiagram
+  autonumber
+  actor R as Ревьюер
+  participant UI as Панель ревьюера
+  participant API as API платформы
+  participant DB as БД
+  participant CH as Чат-ассистент (внешний)
+  R->>UI: «Скопировать запрос»
+  UI->>API: GET /api/assessments/{id}/ai-summary/prompt
+  API->>DB: Результаты, темы, ответы, сертификаты
+  API->>API: Обезличивание: без ФИО, email, телефона, ссылок
+  API->>DB: Журнал доступа: ai_summary_prompt
+  API-->>UI: Текст запроса + шаблон JSON
+  UI-->>R: Запрос в буфере обмена
+  R->>CH: Вставить запрос
+  CH-->>R: Ответ (JSON по шаблону)
+  R->>UI: «Вставить ответ» → «Сохранить»
+  UI->>API: POST …/ai-summary/import
+  API->>API: Извлечение JSON, проверка по схеме
+  alt ответ невалиден
+    API-->>UI: 400: какое поле неверно
+  else ответ валиден
+    API->>DB: INSERT ai_summary, пересчёт оценки
+    API-->>UI: 201: резюме и итоговая оценка
+  end

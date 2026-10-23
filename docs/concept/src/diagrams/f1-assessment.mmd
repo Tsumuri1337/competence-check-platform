@@ -1,0 +1,26 @@
+flowchart TB
+  A@{ shape: stadium, label: "Начало" }
+  B@{ shape: diam, label: "Есть учётная запись?" }
+  C@{ shape: sl-rect, label: "Ввод ФИО, телефона, email,\nпароля, никнейма, согласия" }
+  D[Создание учётной записи,\nшифрование ПДн]
+  E@{ shape: fr-rect, label: "OSINT-проверка\nсертификатов (в фоне)" }
+  F@{ shape: sl-rect, label: "Ввод email и пароля" }
+  G@{ shape: sl-rect, label: "Выбор должности\n(профстандарта)" }
+  H@{ shape: diam, label: "Проходить\nсамооценку?" }
+  I@{ shape: fr-rect, label: "Самооценка по ТФ\n(1–5 по каждому пункту)" }
+  J@{ shape: fr-rect, label: "Разминка: N вопросов\nна знания (N=15)" }
+  K@{ shape: notch-pent, label: "Цикл: ситуационная\nзадача i = 1..M" }
+  L@{ shape: fr-rect, label: "Прохождение\nситуационной задачи i" }
+  M@{ shape: notch-pent, label: "Конец цикла" }
+  N@{ shape: sl-rect, label: "Развёрнутый ответ\nна кейс-задание" }
+  O[Фиксация проверки:\nстатус «Отправлена»]
+  P@{ shape: fr-rect, label: "Расчёт предварительной\nитоговой оценки" }
+  Q@{ shape: doc, label: "Результат для кандидата:\nбаллы по разделам" }
+  Z@{ shape: stadium, label: "Конец" }
+  A --> B
+  B -- нет --> C --> D --> E --> G
+  B -- да --> F --> G
+  G --> H
+  H -- да --> I --> J
+  H -- нет --> J
+  J --> K --> L --> M --> N --> O --> P --> Q --> Z

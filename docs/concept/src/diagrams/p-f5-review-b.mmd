@@ -1,0 +1,13 @@
+flowchart TB
+  K@{ shape: sl-rect, label: "Оценка кейс-заданий\nпо рубрике (0–100)" }
+  L@{ shape: sl-rect, label: "Подтверждение / отклонение\nсертификатов «ручная проверка»" }
+  M@{ shape: fr-rect, label: "Пересчёт итоговой\nоценки" }
+  N@{ shape: diam, label: "Контекст —\nкандидат?" }
+  O@{ shape: sl-rect, label: "Решение: принять /\nотклонить / рассмотреть" }
+  P@{ shape: doc, label: "Комплексный отчёт\n(PDF)" }
+  Z@{ shape: stadium, label: "Конец" }
+  X1@{ shape: circle, label: "1" }
+  X1 --> K --> L --> M --> N
+  N -- да --> O --> P
+  N -- нет --> P
+  P --> Z

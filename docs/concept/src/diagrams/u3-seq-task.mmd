@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  actor K as Кандидат
+  participant UI as Веб-интерфейс
+  participant API as API платформы
+  participant E as Движок задач
+  participant DB as БД
+  K->>UI: Открыть задачу i
+  UI->>API: GET /api/assessments/{id}/tasks/{i}
+  API->>DB: Проверка владельца проверки
+  API->>E: Выдать сценарий и первый шаг
+  E-->>UI: Сценарий, материалы, шаг 1
+  loop для каждого шага
+    K->>UI: Ответ на шаг (выбор / порядок / текст)
+    UI->>API: POST …/steps/{n} (ответ, время)
+    API->>E: Оценить шаг по рубрике
+    alt шаг критический и ответ неверный
+      E-->>API: Балл шага + шаг-последствие
+    else
+      E-->>API: Балл шага + следующий шаг
+    end
+    API->>DB: INSERT step_response
+    API-->>UI: Следующий шаг (без верного ответа)
+  end
+  UI->>API: Завершить задачу
+  API->>DB: Итог задачи, статус шагов «на оценку ревьюеру» для текстовых
+  API-->>UI: Задача завершена

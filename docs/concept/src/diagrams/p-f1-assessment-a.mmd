@@ -1,0 +1,19 @@
+flowchart TB
+  A@{ shape: stadium, label: "Начало" }
+  B@{ shape: diam, label: "Есть учётная запись?" }
+  C@{ shape: sl-rect, label: "Ввод ФИО, телефона, email,\nпароля, никнейма, согласия" }
+  D[Создание учётной записи,\nшифрование ПДн]
+  E@{ shape: fr-rect, label: "OSINT-проверка\nсертификатов (в фоне)" }
+  F@{ shape: sl-rect, label: "Ввод email и пароля" }
+  G@{ shape: sl-rect, label: "Выбор должности\n(профстандарта)" }
+  H@{ shape: diam, label: "Проходить\nсамооценку?" }
+  I@{ shape: fr-rect, label: "Самооценка по ТФ\n(1–5 по каждому пункту)" }
+  J@{ shape: fr-rect, label: "Разминка: N вопросов\nна знания (N=15)" }
+  X1@{ shape: circle, label: "1" }
+  A --> B
+  B -- нет --> C --> D --> E --> G
+  B -- да --> F --> G
+  G --> H
+  H -- да --> I --> J
+  H -- нет --> J
+  J --> X1
